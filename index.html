@@ -625,7 +625,17 @@ function onCuadreInput(id){
 async function onMotoresChange(input, id){
   let v = parseInt(input.value||0); if(v<0) v=0; input.value=v;
   const p = (PISCINAS[regSlug]||[]).find(p=>p.id===id);
-  if(p){ p.motores = v; await savePiscinasAll(); }
+  if(p){
+    const anterior = p.motores;
+    p.motores = v;
+    const ok = await savePiscinasAll();
+    if(!ok){
+      p.motores = anterior;
+      input.value = anterior;
+      alert('❌ No se pudo guardar el cambio de motores. Verifica tu conexión e intenta de nuevo.');
+      return;
+    }
+  }
   onCuadreInput(id);
 }
 function rowPersonal(p, val, streak){
