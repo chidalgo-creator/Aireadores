@@ -116,98 +116,99 @@ function todayStr(){
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(iso){ if(!iso) return '-'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
 
-/* =============== STORAGE HELPERS (Supabase) =============== */
-const SB_URL = 'https://pwpvxnnnsizefcsmckjt.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3cHZ4bm5uc2l6ZWZjc21ja2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTg1NTUsImV4cCI6MjEwMjYzNDU1NX0.HUvASQhdp_mNMEoS6paP9h8iyNXLYL-tq6WKwaeSS_E';
-const SB_HEADERS = { apikey: SB_KEY, Authorization: 'Bearer '+SB_KEY };
+/* =============== STORAGE HELPERS (Firebase Realtime Database) =============== */
+const FB_URL = 'https://aireadores-caesa-default-rtdb.firebaseio.com';
 
 async function fetchWithTimeout(url, opts, ms){
   const ctrl = new AbortController();
-  const t = setTimeout(()=>ctrl.abort(), ms || 8000);
+  const t = setTimeout(()=>ctrl.abort(), ms || 10000);
   try{
     return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
   } finally { clearTimeout(t); }
 }
 
+function keyToFbPath(key){
+  if(key === 'config:camps')         return 'camps';
+  if(key === 'roster:personal:all')  return 'personal';
+  if(key === 'roster:piscinas:all')  return 'piscinas';
+  if(key === 'db:initialized:v1')    return 'db_initialized';
+  if(key === 'config:taller')        return 'taller';
+  if(key.startsWith('report:')){
+    const parts = key.split(':');
+    return 'reportes/'+parts[1]+'/'+parts[2];
+  }
+  return key.replace(/:/g,'_');
+}
+
 async function sget(key){
   try{
-    const bust = '&_ts='+Date.now();
-    const res = await fetchWithTimeout(SB_URL+'/rest/v1/app_storage?key=eq.'+encodeURIComponent(key)+'&select=value'+bust, {
-      headers: Object.assign({}, SB_HEADERS, { 'Cache-Control': 'no-store' })
-    });
-    if(!res.ok){ console.error('storage get failed', key, await res.text()); return null; }
-    const rows = await res.json();
-    return rows.length ? rows[0].value : null;
-  }catch(e){ console.error('storage get failed', key, e); return null; }
+    const res = await fetchWithTimeout(FB_URL+'/'+keyToFbPath(key)+'.json?_ts='+Date.now());
+    if(!res.ok){ console.error('firebase get failed', key, res.status); return null; }
+    return await res.json(); // devuelve null si no existe
+  }catch(e){ console.error('firebase get failed', key, e); return null; }
 }
+
 async function sset(key, val){
   try{
-    const updated_at = new Date().toISOString();
-    const jsonHeaders = Object.assign({}, SB_HEADERS, { 'Content-Type': 'application/json' });
-
-    // 1. Verificar si el registro ya existe (GET funciona bien)
-    const checkRes = await fetchWithTimeout(
-      SB_URL+'/rest/v1/app_storage?key=eq.'+encodeURIComponent(key)+'&select=key',
-      { headers: SB_HEADERS }
-    );
-    if(!checkRes.ok){
-      const errText = await checkRes.text();
-      window._lastSsetError = 'Verificación HTTP '+checkRes.status+': '+errText.slice(0,400);
-      return null;
-    }
-    const existing = await checkRes.json();
-
-    let res;
-    if(existing.length > 0){
-      // 2a. Ya existe → actualizar con PATCH
-      res = await fetchWithTimeout(
-        SB_URL+'/rest/v1/app_storage?key=eq.'+encodeURIComponent(key),
-        { method:'PATCH', headers: jsonHeaders, body: JSON.stringify({ value: val, updated_at }) }
-      );
-    } else {
-      // 2b. No existe → insertar con POST
-      res = await fetchWithTimeout(
-        SB_URL+'/rest/v1/app_storage',
-        { method:'POST', headers: jsonHeaders, body: JSON.stringify([{ key, value: val, updated_at }]) }
-      );
-    }
-
+    const res = await fetchWithTimeout(FB_URL+'/'+keyToFbPath(key)+'.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(val)
+    });
     if(!res.ok){
-      const errText = await res.text();
-      console.error('storage set failed', key, res.status, errText);
-      window._lastSsetError = 'HTTP '+res.status+': '+errText.slice(0,400);
+      const err = await res.text();
+      console.error('firebase set failed', key, res.status, err);
+      window._lastSsetError = 'HTTP '+res.status+': '+err.slice(0,200);
       return null;
     }
     window._lastSsetError = null;
     return true;
   }catch(e){
-    console.error('storage set failed', key, e);
-    window._lastSsetError = 'Error de red/CORS: '+String(e);
+    console.error('firebase set failed', key, e);
+    window._lastSsetError = 'Error de red: '+String(e);
     return null;
   }
 }
+
 async function slist(prefix){
-  try{
-    const res = await fetchWithTimeout(SB_URL+'/rest/v1/app_storage?key=like.'+encodeURIComponent(prefix)+'%25&select=key', {
-      headers: SB_HEADERS
-    });
-    if(!res.ok) return [];
-    const rows = await res.json();
-    return rows.map(r=>r.key);
-  }catch(e){ return []; }
+  // Solo se usa para prefix='report:' (borrar reportes en debug)
+  if(prefix === 'report:'){
+    try{
+      const res = await fetchWithTimeout(FB_URL+'/reportes.json?shallow=true&_ts='+Date.now());
+      if(!res.ok) return [];
+      const slugs = await res.json();
+      if(!slugs) return [];
+      const keys = [];
+      for(const slug of Object.keys(slugs)){
+        const r2 = await fetchWithTimeout(FB_URL+'/reportes/'+slug+'.json?shallow=true');
+        if(!r2.ok) continue;
+        const dates = await r2.json();
+        if(!dates) continue;
+        for(const date of Object.keys(dates)) keys.push('report:'+slug+':'+date);
+      }
+      return keys;
+    }catch(e){ return []; }
+  }
+  return [];
 }
+
 async function sgetPrefixMap(prefix){
-  try{
-    const res = await fetchWithTimeout(SB_URL+'/rest/v1/app_storage?key=like.'+encodeURIComponent(prefix)+'%25&select=key,value', {
-      headers: SB_HEADERS
-    }, 15000);
-    if(!res.ok){ console.error('storage prefix fetch failed', prefix, await res.text()); return {}; }
-    const rows = await res.json();
-    const map = {};
-    rows.forEach(r=>{ map[r.key] = r.value; });
-    return map;
-  }catch(e){ console.error('storage prefix fetch failed', prefix, e); return {}; }
+  // prefix = 'report:SLUG:' → lee /reportes/SLUG y devuelve {'report:SLUG:DATE': valor}
+  if(prefix.startsWith('report:')){
+    const slug = prefix.split(':')[1];
+    try{
+      const res = await fetchWithTimeout(FB_URL+'/reportes/'+slug+'.json?_ts='+Date.now(), {}, 15000);
+      if(!res.ok){ console.error('firebase prefix failed', prefix, res.status); return {}; }
+      const data = await res.json();
+      if(!data) return {};
+      const map = {};
+      Object.entries(data).forEach(([date, val])=>{ map['report:'+slug+':'+date] = val; });
+      return map;
+    }catch(e){ console.error('firebase prefix failed', prefix, e); return {}; }
+  }
+  return {};
 }
+
 async function savePersonalAll(){ return await sset('roster:personal:all', PERSONAL); }
 async function savePiscinasAll(){ return await sset('roster:piscinas:all', PISCINAS); }
 
