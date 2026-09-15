@@ -338,6 +338,76 @@ async function initInner(){
   }
   renderNav();
   render();
+
+  // Auto-refresh silencioso en modo campo: cada 90 segundos actualiza PERSONAL y PISCINAS
+  // sin borrar lo que el operador tenga escrito (actualizarDatos ya hace eso).
+  if(MODE==='campo'){
+    window._campoRefreshTimer = setInterval(async ()=>{
+      // Solo refrescar si no hay un input enfocado (el operador no está escribiendo ahora)
+      const active = document.activeElement;
+      const escribiendo = active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.tagName==='SELECT');
+      if(escribiendo) return;
+      await actualizarDatosSilencioso();
+    }, 90000);
+  }
+}
+
+// Igual que actualizarDatos pero sin alert/loading — para el auto-refresh en campo.
+// Solo re-renderiza si PERSONAL o PISCINAS realmente cambiaron (evita parpadeos).
+async function actualizarDatosSilencioso(){
+  try{
+    const freshPersonal = await sget('roster:personal:all');
+    const freshPiscinas = await sget('roster:piscinas:all');
+    if(!freshPersonal && !freshPiscinas) return; // sin conexión, no cambiar nada
+
+    // Detectar si algo cambió comparando con los datos actuales en memoria
+    const piscinasStr = JSON.stringify(PISCINAS);
+    const personalStr = JSON.stringify(PERSONAL);
+    const freshPiStr = JSON.stringify(freshPiscinas);
+    const freshPeStr = JSON.stringify(freshPersonal);
+    const cambioDetectado = (freshPiscinas && freshPiStr !== piscinasStr) ||
+                            (freshPersonal && freshPeStr !== personalStr);
+
+    // Actualizar datos en memoria
+    if(freshPersonal){ PERSONAL = freshPersonal; for(const c of CAMPS){ if(!PERSONAL[c.slug]) PERSONAL[c.slug]=[]; } }
+    if(freshPiscinas){ PISCINAS = freshPiscinas; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; } }
+
+    if(cambioDetectado){
+      // Capturar valores actuales del DOM antes de re-renderizar
+      const domPiscinas = {};
+      document.querySelectorAll('#reg-piscinas-body tr[data-ps]').forEach(tr=>{
+        const pid = tr.getAttribute('data-ps');
+        domPiscinas[pid] = {
+          enc: parseInt(tr.querySelector('.ps-enc')?.value||0)||0,
+          apg: parseInt(tr.querySelector('.ps-apg')?.value||0)||0,
+          det: parseInt(tr.querySelector('.ps-det')?.value||0)||0,
+          nov: (tr.querySelector('.ps-nov')?.value||'').trim()
+        };
+      });
+      const domPersonal = {};
+      document.querySelectorAll('#reg-personal-body tr[data-pe]').forEach(tr=>{
+        const pid = tr.getAttribute('data-pe');
+        domPersonal[pid] = {
+          estado: tr.querySelector('.pe-estado')?.value || 'EN CAMPAMENTO',
+          novedad: (tr.querySelector('.pe-nov')?.value||'').trim()
+        };
+      });
+      const hayDatosDOM = Object.keys(domPiscinas).length > 0 || Object.keys(domPersonal).length > 0;
+      if(hayDatosDOM){
+        if(!regDraft) regDraft = {piscinas:{}, personal:{}};
+        Object.assign(regDraft.piscinas, domPiscinas);
+        Object.assign(regDraft.personal, domPersonal);
+      }
+      render(); // solo re-renderiza si hubo cambio real en los datos
+    }
+
+    // Siempre actualizar el indicador de hora
+    const ind = document.getElementById('ultimo-actualizado');
+    if(ind){
+      const d = new Date();
+      ind.textContent = 'Actualizado '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+  }catch(e){ /* silencioso — no alertar al operador */ }
 }
 
 function campName(slug){ const c=CAMPS.find(c=>c.slug===slug); return c?c.nombre:slug; }
@@ -581,7 +651,7 @@ async function renderRegistro(slug, locked){
 
     <div class="footer-actions">
       <button class="btn" onclick="saveReport('${slug}')">💾 Guardar reporte del día</button>
-      ${locked ? '<button class="btn secondary" onclick="actualizarDatos()" style="margin-left:8px" title="Recarga personal y piscinas actualizados por el administrador">🔄 Actualizar personal/piscinas</button>' : ''}
+      ${locked ? '<button class="btn secondary" onclick="actualizarDatos()" style="margin-left:8px" title="Recarga personal y piscinas actualizados por el administrador">🔄 Actualizar datos</button><span id="ultimo-actualizado" style="margin-left:8px;font-size:0.75rem;color:#94a3b8;align-self:center"></span>' : ''}
       <span class="saved-flash" id="reg-saved">✓ Guardado</span>
     </div>
   `;
@@ -749,6 +819,11 @@ async function actualizarDatos(){
       regDraft = null;
     }
     render();
+    const ind = document.getElementById('ultimo-actualizado');
+    if(ind){
+      const d = new Date();
+      ind.textContent = 'Actualizado '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
   } catch(e){
     alert('No se pudo actualizar: '+e);
   } finally{
@@ -819,6 +894,10 @@ async function saveReport(slug){
     alert('⚠️ Error al guardar el reporte. Verifica tu conexión e intenta de nuevo.' + detalle);
     return;
   }
+  // Actualizar regDraft con los valores recién guardados.
+  // Esto evita que un renderRegistro posterior (ej: al actualizar piscinas o auto-refresh)
+  // use valores viejos del borrador si Firebase aún no ha propagado el nuevo reporte.
+  regDraft = {piscinas, personal, savedAt: report.savedAt};
   if(personalChanged) await savePersonalAll();
   const flash = document.getElementById('reg-saved');
   if(flash){ flash.classList.add('show'); setTimeout(()=>flash.classList.remove('show'), 2200); }
