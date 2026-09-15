@@ -1526,7 +1526,7 @@ function renderConfigPiscinas(){
           <td><select id="ps-tipo-${i}"><option value="PS" ${p.tipo==='PS'?'selected':''}>PS</option><option value="PC" ${p.tipo==='PC'?'selected':''}>PC</option></select></td>
           <td><input type="number" class="mini-in" value="${p.motores}" id="ps-mot-${i}"></td>
           <td><input type="number" step="0.01" class="mini-in" style="width:80px" value="${p.ha!=null?p.ha:''}" id="ps-ha-${i}"></td>
-          <td><button class="btn small" onclick="savePiscinaRow(${i})">💾</button> <button class="btn small danger" onclick="deletePiscinaRow(${i})">✕</button></td>
+          <td><button class="btn small" onclick="savePiscinaRow(${i})">💾</button> <button class="btn small danger" onclick="deletePiscinaRow(${i})">✕</button> <span id="ps-status-${i}" style="color:#34d399;font-size:0.8rem;opacity:0;transition:opacity .3s"></span></td>
         </tr>`).join('')}
       </tbody></table></div>
       <div class="inline-form">
@@ -1553,7 +1553,7 @@ async function savePiscinaRow(i){
     const status = document.getElementById('ps-status-'+i);
     if(status){ status.textContent='✓'; status.style.opacity='1'; setTimeout(()=>{ status.style.opacity='0'; },1500); }
   } else {
-    alert('❌ No se pudo guardar en Supabase. Revisa tu conexión e intenta de nuevo.');
+    alert('❌ No se pudo guardar en Firebase. Revisa tu conexión e intenta de nuevo.');
     const fresh = await sget('roster:piscinas:all');
     if(fresh){ PISCINAS = fresh; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; } }
     renderConfigPiscinas();
