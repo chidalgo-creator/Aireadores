@@ -119,6 +119,17 @@ function fmtDate(iso){ if(!iso) return '-'; const [y,m,d]=iso.split('-'); return
 /* =============== STORAGE HELPERS (Firebase Realtime Database) =============== */
 const FB_URL = 'https://aireadores-caesa-default-rtdb.firebaseio.com';
 
+// Firebase convierte objetos con claves 0,1,2,... a arrays.
+// Esta función los revierte a objeto con claves como strings.
+function normalizePiscinasObj(piscinas){
+  if(!piscinas || typeof piscinas !== 'object') return {};
+  if(!Array.isArray(piscinas)) return piscinas;
+  // Firebase coerced integer-keyed object → restore as {index: value}
+  const obj = {};
+  piscinas.forEach((v,i)=>{ if(v!=null) obj[String(i)] = v; });
+  return obj;
+}
+
 async function fetchWithTimeout(url, opts, ms){
   const ctrl = new AbortController();
   const t = setTimeout(()=>ctrl.abort(), ms || 10000);
@@ -202,7 +213,11 @@ async function sgetPrefixMap(prefix){
       const data = await res.json();
       if(!data) return {};
       const map = {};
-      Object.entries(data).forEach(([date, val])=>{ map['report:'+slug+':'+date] = val; });
+      Object.entries(data).forEach(([date, val])=>{
+        // Normalizar piscinas por si Firebase convirtió el objeto a array
+        if(val && val.piscinas) val.piscinas = normalizePiscinasObj(val.piscinas);
+        map['report:'+slug+':'+date] = val;
+      });
       return map;
     }catch(e){ console.error('firebase prefix failed', prefix, e); return {}; }
   }
@@ -551,7 +566,10 @@ async function renderRegistro(slug, locked){
   const key = 'report:'+slug+':'+regDate;
   let report = campReportsMap[key] || null;
   // Fallback: si sgetPrefixMap no devolvió nada para esta fecha, buscar directo
-  if(!report) report = await sget(key);
+  if(!report){
+    report = await sget(key);
+    if(report && report.piscinas) report.piscinas = normalizePiscinasObj(report.piscinas);
+  }
   const piscinas = PISCINAS[slug] || [];
   const personal = (PERSONAL[slug] || []).filter(p=>p.activo!==false);
 
@@ -698,6 +716,18 @@ async function onMotoresChange(input, id){
   const p = (PISCINAS[regSlug]||[]).find(p=>p.id===id);
   if(p){
     const anterior = p.motores;
+    if(v === anterior){ onCuadreInput(id); return; }
+    const confirmado = confirm(
+      '⚙️ CAMBIO DE MOTORES — Piscina ' + id + '\n\n' +
+      'Valor anterior: ' + anterior + ' motores\n' +
+      'Valor nuevo:    ' + v + ' motores\n\n' +
+      '¿Confirmas este cambio?\n' +
+      '(Este dato afecta el cálculo de cuadre para TODOS los reportes de ' + regSlug + ')'
+    );
+    if(!confirmado){
+      input.value = anterior;
+      return;
+    }
     p.motores = v;
     const ok = await savePiscinasAll();
     if(!ok){
@@ -706,6 +736,7 @@ async function onMotoresChange(input, id){
       alert('❌ No se pudo guardar el cambio de motores. Verifica tu conexión e intenta de nuevo.');
       return;
     }
+    console.log('✅ Motores piscina '+id+' cambiado: '+anterior+' → '+v+' ('+regSlug+')');
   }
   onCuadreInput(id);
 }
@@ -900,7 +931,39 @@ async function saveReport(slug){
   regDraft = {piscinas, personal, savedAt: report.savedAt};
   if(personalChanged) await savePersonalAll();
   const flash = document.getElementById('reg-saved');
-  if(flash){ flash.classList.add('show'); setTimeout(()=>flash.classList.remove('show'), 2200); }
+  if(flash){
+    flash.textContent = '✓ Guardado — ' + fmtDate(regDate);
+    flash.classList.add('show');
+    setTimeout(()=>flash.classList.remove('show'), 2800);
+  }
+  // Verificación post-guardado: leer de Firebase 3s después para confirmar
+  // que los datos de piscinas quedaron almacenados correctamente.
+  const _savedPiscinas = Object.assign({}, piscinas);
+  const _savedKey = key;
+  const _savedSlug = slug;
+  setTimeout(async ()=>{
+    try{
+      const check = await sget(_savedKey);
+      if(!check){ console.error('⚠️ Verificación: reporte no encontrado en Firebase:', _savedKey); return; }
+      const fbPiscinas = normalizePiscinasObj(check.piscinas || {});
+      const mismatches = [];
+      for(const id in _savedPiscinas){
+        const sv = _savedPiscinas[id];
+        const fb = fbPiscinas[id];
+        if(!fb){
+          mismatches.push('Piscina '+id+': datos NO encontrados en Firebase (enc='+sv.enc+', det='+sv.det+')');
+        } else if(fb.enc !== sv.enc || fb.det !== sv.det || fb.apg !== sv.apg){
+          mismatches.push('Piscina '+id+': guardado enc='+sv.enc+'/det='+sv.det+' pero Firebase tiene enc='+fb.enc+'/det='+fb.det);
+        }
+      }
+      if(mismatches.length){
+        console.error('⚠️ Verificación post-guardado FALLA para '+_savedSlug+' '+_savedKey+'\n'+mismatches.join('\n'));
+        alert('⚠️ ADVERTENCIA: se detectaron diferencias entre lo guardado y lo almacenado en Firebase:\n\n'+mismatches.slice(0,5).join('\n')+'\n\nCaptura esta pantalla y envíala al administrador. Intenta guardar de nuevo.');
+      } else {
+        console.log('✅ Verificación post-guardado OK para '+_savedSlug+' ('+regDate+'): '+Object.keys(_savedPiscinas).length+' piscinas correctas');
+      }
+    }catch(e){ console.error('Error en verificación post-guardado:', e); }
+  }, 3000);
 }
 
 
@@ -914,7 +977,10 @@ async function fetchReports(date, slugs){
     const campMap = await sgetPrefixMap('report:'+slug+':');
     let own = campMap['report:'+slug+':'+date] || null;
     // Fallback: si sgetPrefixMap no devolvió nada para esta fecha, buscar directo
-    if(!own) own = await sget('report:'+slug+':'+date);
+    if(!own){
+      own = await sget('report:'+slug+':'+date);
+      if(own && own.piscinas) own.piscinas = normalizePiscinasObj(own.piscinas);
+    }
     const personal = (PERSONAL[slug]||[]).filter(p=>p.activo!==false);
     const personalOut = {};
     personal.forEach(p=>{
