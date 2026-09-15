@@ -682,7 +682,7 @@ function rowPiscina(p, val, streak, showSector, locked){
   return `<tr data-ps="${esc(p.id)}">
     <td><strong style="color:${isPC?'#a78bfa':'#f8fafc'}">${isPC?'PC ':'PS '}${esc(p.id.replace(/^Pc/,''))}</strong></td>
     ${showSector?`<td style="font-size:0.75rem;color:#94a3b8">${esc(p.sector||'')}</td>`:''}
-    <td>${locked ? `<span class="mini-in ps-mot" style="display:inline-block;min-width:50px;text-align:center">${p.motores}</span>` : `<input type="number" class="mini-in ps-mot" min="0" value="${p.motores}" onchange="onMotoresChange(this,'${esc(p.id)}')">`}</td>
+    <td><span class="mini-in ps-mot" style="display:inline-block;min-width:50px;text-align:center;cursor:default" title="Motores instalados — solo editable en Configuración → Piscinas">${p.motores}</span></td>
     <td><input type="number" class="mini-in ps-enc" min="0" value="${val.enc}" oninput="onCuadreInput('${esc(p.id)}')"></td>
     <td><input type="number" class="mini-in ps-apg" min="0" value="${val.apg||0}" oninput="onCuadreInput('${esc(p.id)}')"></td>
     <td><input type="number" class="mini-in ps-det" min="0" value="${val.det}" oninput="onCuadreInput('${esc(p.id)}')">${alerta}</td>
