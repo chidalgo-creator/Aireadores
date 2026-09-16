@@ -1,0 +1,2001 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aireadores CAESA — Registro y Control</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding-bottom:40px}
+.topbar{background:#1e293b;padding:14px 24px;border-bottom:1px solid #334155;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50}
+.topbar h1{font-size:1.05rem;font-weight:700;color:#f8fafc;flex:1}
+.topbar .campo-badge{background:#0ea5e9;color:#fff;padding:5px 12px;border-radius:20px;font-size:0.75rem;font-weight:700}
+.nav-btn{padding:7px 16px;border-radius:6px;border:none;cursor:pointer;font-size:0.78rem;font-weight:600;transition:all .15s}
+.nav-btn.active{background:#0ea5e9;color:#fff}
+.nav-btn:not(.active){background:#334155;color:#94a3b8}
+.nav-btn:not(.active):hover{background:#475569;color:#e2e8f0}
+.wrap{padding:16px 24px;max-width:1400px;margin:0 auto}
+.card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:16px 18px;margin-bottom:16px}
+.card h2{font-size:0.95rem;color:#f8fafc;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:0.67rem;color:#64748b;text-transform:uppercase;letter-spacing:.4px}
+select,input[type=date],input[type=text],input[type=number],textarea{background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;padding:7px 10px;font-size:0.82rem;outline:none;font-family:inherit}
+select:focus,input:focus,textarea:focus{border-color:#38bdf8}
+button.btn{padding:8px 16px;background:#0ea5e9;border:none;border-radius:6px;color:#fff;font-size:0.8rem;font-weight:600;cursor:pointer}
+button.btn:hover{background:#0284c7}
+button.btn.secondary{background:#334155;color:#e2e8f0}
+button.btn.secondary:hover{background:#475569}
+button.btn.small{padding:4px 10px;font-size:0.72rem}
+button.btn.danger{background:#7f1d1d;color:#fecaca}
+button.btn.danger:hover{background:#991b1b}
+table{width:100%;border-collapse:collapse;font-size:0.8rem}
+thead tr{background:#0f172a}
+th{padding:8px 10px;text-align:left;font-size:0.65rem;text-transform:uppercase;letter-spacing:.5px;color:#64748b;font-weight:600;border-bottom:1px solid #334155;white-space:nowrap}
+td{padding:6px 10px;border-bottom:1px solid #24324a}
+tbody tr:hover{background:#16213a}
+.tw{overflow-x:auto}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px}
+.stat{background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px 14px}
+.stat .lbl{font-size:0.63rem;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.stat .val{font-size:1.3rem;font-weight:700}
+.green{color:#34d399}.yellow{color:#fbbf24}.blue{color:#38bdf8}.gray{color:#94a3b8}.red{color:#f87171}.purple{color:#a78bfa}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:600}
+.badge.ok{background:#064e3b;color:#34d399}
+.badge.warn{background:#451a03;color:#fbbf24}
+.badge.off{background:#3b0764;color:#c084fc}
+.badge.gray{background:#334155;color:#94a3b8}
+.badge.red{background:#450a0a;color:#f87171}
+.mini-in{width:64px}
+input[type=number].mini-in{width:64px;text-align:center}
+.nov-in{width:100%;min-width:140px}
+.saved-flash{font-size:0.72rem;color:#34d399;opacity:0;transition:opacity .3s;margin-left:8px}
+.saved-flash.show{opacity:1}
+.empty{text-align:center;padding:40px;color:#475569;font-size:0.85rem}
+.link-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #24324a}
+.link-row code{background:#0f172a;padding:4px 8px;border-radius:5px;font-size:0.72rem;color:#7dd3fc;flex:1;overflow-x:auto;white-space:nowrap}
+.tabs2{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tab2{padding:6px 14px;border-radius:20px;border:1px solid #334155;background:transparent;color:#94a3b8;cursor:pointer;font-size:0.75rem;font-weight:600}
+.tab2.active{background:#0ea5e9;border-color:#0ea5e9;color:#fff}
+.sub{font-size:0.72rem;color:#64748b;margin-bottom:10px}
+.pill{display:inline-flex;align-items:center;gap:4px;background:#0f172a;border:1px solid #334155;padding:3px 9px;border-radius:14px;font-size:0.72rem;color:#94a3b8}
+.loading{display:flex;align-items:center;justify-content:center;padding:80px;color:#64748b;font-size:0.9rem}
+.footer-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.section-title{font-size:0.68rem;text-transform:uppercase;letter-spacing:.6px;color:#64748b;font-weight:700;margin:16px 0 8px}
+.inline-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;background:#0f172a;border:1px dashed #334155;border-radius:8px;padding:10px;margin-top:8px}
+.hint{font-size:0.7rem;color:#64748b;margin-top:4px}
+@media(max-width:700px){.row{flex-direction:column;align-items:stretch}.wrap{padding:10px}}
+</style>
+</head>
+<body>
+
+<div class="topbar" id="topbar">
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none"><circle cx="11" cy="11" r="10" stroke="#0ea5e9" stroke-width="1.5"/><path d="M11 5v12M5 11h12" stroke="#0ea5e9" stroke-width="1.5" stroke-linecap="round"/><circle cx="11" cy="11" r="2.5" fill="#0ea5e9"/></svg>
+  <h1>Aireadores CAESA</h1>
+  <div id="nav-area" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+</div>
+
+<div class="wrap" id="app">
+  <div class="loading">Cargando datos compartidos…</div>
+</div>
+
+<script>
+/* =============== SEED DATA =============== */
+const DEFAULT_CAMPS = [{"slug": "CAESA2", "nombre": "CAESA 2"}, {"slug": "CAESA1", "nombre": "CAESA 1"}, {"slug": "PANTRUSKO1", "nombre": "PANTRUSKO 1"}, {"slug": "PANTRUSKO2", "nombre": "PANTRUSKO 2"}, {"slug": "ROLESA1", "nombre": "ROLESA 1"}, {"slug": "ROLESA2", "nombre": "ROLESA 2"}, {"slug": "FIMASA1", "nombre": "FIMASA 1"}, {"slug": "FIMASA2", "nombre": "FIMASA 2"}, {"slug": "RECORCHOLIS1", "nombre": "RECORCHOLIS 1"}, {"slug": "RECORCHOLIS2", "nombre": "RECORCHOLIS 2"}, {"slug": "FIMASA3", "nombre": "FIMASA 3"}];
+const SEED_PISCINAS = {"CAESA2": [{"id": "1", "tipo": "PS", "motores": 14, "ha": 7.38}, {"id": "2", "tipo": "PS", "motores": 12, "ha": 5.77}, {"id": "3", "tipo": "PS", "motores": 11, "ha": 6.93}, {"id": "4", "tipo": "PS", "motores": 13, "ha": 6.16}, {"id": "5", "tipo": "PS", "motores": 12, "ha": 6.22}, {"id": "6", "tipo": "PS", "motores": 8, "ha": 4.46}, {"id": "7", "tipo": "PS", "motores": 14, "ha": 6.77}, {"id": "8", "tipo": "PS", "motores": 14, "ha": 5.99}, {"id": "9", "tipo": "PS", "motores": 16, "ha": 8.17}, {"id": "10", "tipo": "PS", "motores": 14, "ha": 6.9}, {"id": "11", "tipo": "PS", "motores": 15, "ha": 8.0}, {"id": "12", "tipo": "PS", "motores": 16, "ha": 7.49}, {"id": "13", "tipo": "PS", "motores": 9, "ha": 4.47}, {"id": "14", "tipo": "PS", "motores": 9, "ha": 5.16}, {"id": "15", "tipo": "PS", "motores": 14, "ha": 7.09}, {"id": "16", "tipo": "PS", "motores": 14, "ha": 6.31}, {"id": "17", "tipo": "PS", "motores": 10, "ha": 5.14}, {"id": "18", "tipo": "PS", "motores": 12, "ha": 6.43}, {"id": "19", "tipo": "PS", "motores": 10, "ha": 5.31}, {"id": "20", "tipo": "PS", "motores": 14, "ha": 7.14}, {"id": "21", "tipo": "PS", "motores": 10, "ha": 4.73}, {"id": "22", "tipo": "PS", "motores": 12, "ha": 5.67}, {"id": "23", "tipo": "PS", "motores": 10, "ha": 5.22}, {"id": "24", "tipo": "PS", "motores": 14, "ha": 6.8}, {"id": "25", "tipo": "PS", "motores": 14, "ha": 6.83}, {"id": "26", "tipo": "PS", "motores": 16, "ha": 7.49}, {"id": "27", "tipo": "PS", "motores": 10, "ha": 5.44}, {"id": "28", "tipo": "PS", "motores": 13, "ha": 7.26}, {"id": "29", "tipo": "PS", "motores": 13, "ha": 6.15}, {"id": "30", "tipo": "PS", "motores": 10, "ha": 5.62}, {"id": "31", "tipo": "PS", "motores": 14, "ha": 7.21}, {"id": "32", "tipo": "PS", "motores": 16, "ha": 8.04}, {"id": "33", "tipo": "PS", "motores": 15, "ha": 7.77}, {"id": "34", "tipo": "PS", "motores": 16, "ha": 8.0}, {"id": "35", "tipo": "PS", "motores": 18, "ha": 8.45}, {"id": "36", "tipo": "PS", "motores": 14, "ha": 7.45}, {"id": "37", "tipo": "PS", "motores": 8, "ha": 4.82}, {"id": "38", "tipo": "PS", "motores": 14, "ha": 5.51}, {"id": "39", "tipo": "PS", "motores": 12, "ha": 5.86}, {"id": "40", "tipo": "PS", "motores": 10, "ha": 4.79}, {"id": "41", "tipo": "PS", "motores": 13, "ha": 5.9}, {"id": "42", "tipo": "PS", "motores": 9, "ha": 6.16}, {"id": "43", "tipo": "PS", "motores": 14, "ha": 7.85}, {"id": "44", "tipo": "PS", "motores": 8, "ha": 6.29}, {"id": "45", "tipo": "PS", "motores": 14, "ha": 8.03}, {"id": "46", "tipo": "PS", "motores": 17, "ha": 8.8}, {"id": "47", "tipo": "PS", "motores": 18, "ha": 8.8}, {"id": "51", "tipo": "PS", "motores": 8, "ha": 3.58}, {"id": "Pc2", "tipo": "PC", "motores": 3, "ha": 1.54}, {"id": "Pc6", "tipo": "PC", "motores": 5, "ha": 1.21}, {"id": "Pc8", "tipo": "PC", "motores": 4, "ha": 1.51}, {"id": "Pc10", "tipo": "PC", "motores": 2, "ha": 1.73}, {"id": "Pc12", "tipo": "PC", "motores": 4, "ha": 1.75}, {"id": "Pc14", "tipo": "PC", "motores": 4, "ha": 1.11}, {"id": "Pc16", "tipo": "PC", "motores": 4, "ha": 1.55}, {"id": "Pc17", "tipo": "PC", "motores": 2, "ha": 1.33}, {"id": "Pc19", "tipo": "PC", "motores": 4, "ha": 1.54}, {"id": "Pc21", "tipo": "PC", "motores": 2, "ha": 1.37}, {"id": "Pc23", "tipo": "PC", "motores": 2, "ha": 1.42}, {"id": "Pc25", "tipo": "PC", "motores": 4, "ha": 1.62}, {"id": "Pc27", "tipo": "PC", "motores": 3, "ha": 1.46}, {"id": "Pc30", "tipo": "PC", "motores": 4, "ha": 1.34}, {"id": "Pc32", "tipo": "PC", "motores": 4, "ha": 1.75}, {"id": "Pc33", "tipo": "PC", "motores": 5, "ha": 1.81}, {"id": "Pc36", "tipo": "PC", "motores": 5, "ha": 1.82}, {"id": "Pc37", "tipo": "PC", "motores": 4, "ha": 1.25}, {"id": "Pc40", "tipo": "PC", "motores": 2, "ha": 1.25}, {"id": "Pc42", "tipo": "PC", "motores": 3, "ha": 1.62}, {"id": "Pc44", "tipo": "PC", "motores": 3, "ha": 1.66}, {"id": "Pc46", "tipo": "PC", "motores": 6, "ha": 2.0}], "CAESA1": [{"id": "1", "tipo": "PS", "motores": 17, "ha": 8.5}, {"id": "2", "tipo": "PS", "motores": 25, "ha": 12.35}, {"id": "3", "tipo": "PS", "motores": 12, "ha": 5.6}, {"id": "4", "tipo": "PS", "motores": 20, "ha": 9.89}, {"id": "5", "tipo": "PS", "motores": 18, "ha": 8.86}, {"id": "6", "tipo": "PS", "motores": 12, "ha": 6.3}, {"id": "7", "tipo": "PS", "motores": 25, "ha": 13.06}, {"id": "8", "tipo": "PS", "motores": 24, "ha": 13.02}, {"id": "10", "tipo": "PS", "motores": 22, "ha": 10.79}, {"id": "11", "tipo": "PS", "motores": 17, "ha": 9.52}, {"id": "12", "tipo": "PS", "motores": 16, "ha": 7.86}, {"id": "13", "tipo": "PS", "motores": 16, "ha": 7.6}, {"id": "14", "tipo": "PS", "motores": 26, "ha": 13.14}, {"id": "15", "tipo": "PS", "motores": 21, "ha": 10.39}, {"id": "16", "tipo": "PS", "motores": 24, "ha": 11.79}, {"id": "17", "tipo": "PS", "motores": 28, "ha": 14.3}, {"id": "20", "tipo": "PS", "motores": 16, "ha": 7.6}, {"id": "21", "tipo": "PS", "motores": 13, "ha": 5.6}, {"id": "22", "tipo": "PS", "motores": 12, "ha": 6.08}, {"id": "Pc1", "tipo": "PC", "motores": 6, "ha": 2.5}, {"id": "Pc11", "tipo": "PC", "motores": 5, "ha": 1.96}, {"id": "Pc12", "tipo": "PC", "motores": 5, "ha": 2.23}, {"id": "Pc15", "tipo": "PC", "motores": 5, "ha": 2.26}, {"id": "Pc4", "tipo": "PC", "motores": 5, "ha": 5.6}, {"id": "Pc5", "tipo": "PC", "motores": 5, "ha": 3.07}, {"id": "Pc6", "tipo": "PC", "motores": 6, "ha": 2.86}, {"id": "Pc8", "tipo": "PC", "motores": 6, "ha": 2.54}], "PANTRUSKO1": [{"id": "1", "tipo": "PS", "motores": 10, "ha": 5.88}, {"id": "2", "tipo": "PS", "motores": 13, "ha": 6.77}, {"id": "3", "tipo": "PS", "motores": 12, "ha": 6.18}, {"id": "4", "tipo": "PS", "motores": 20, "ha": 9.58}, {"id": "5", "tipo": "PS", "motores": 20, "ha": 8.96}, {"id": "6", "tipo": "PS", "motores": 10, "ha": 6.3}, {"id": "7", "tipo": "PS", "motores": 10, "ha": 4.83}, {"id": "8", "tipo": "PS", "motores": 13, "ha": 6.51}, {"id": "9", "tipo": "PS", "motores": 9, "ha": 3.65}, {"id": "10", "tipo": "PS", "motores": 10, "ha": 4.65}, {"id": "11", "tipo": "PS", "motores": 10, "ha": 4.21}, {"id": "12", "tipo": "PS", "motores": 6, "ha": 2.36}, {"id": "13", "tipo": "PS", "motores": 10, "ha": 4.83}, {"id": "Pc1", "tipo": "PC", "motores": 4, "ha": 2.09}, {"id": "Pc12", "tipo": "PC", "motores": 3, "ha": 1.35}, {"id": "Pc4", "tipo": "PC", "motores": 6, "ha": 2.28}, {"id": "Pc5", "tipo": "PC", "motores": 6, "ha": 1.76}, {"id": "Pc7", "tipo": "PC", "motores": 3, "ha": 1.58}, {"id": "Pc9", "tipo": "PC", "motores": 3, "ha": 1.74}], "PANTRUSKO2": [{"id": "1", "tipo": "PS", "motores": 10, "ha": 7.62}, {"id": "2", "tipo": "PS", "motores": 21, "ha": 14.0}, {"id": "3", "tipo": "PS", "motores": 11, "ha": 6.47}, {"id": "4", "tipo": "PS", "motores": 22, "ha": 14.33}, {"id": "5", "tipo": "PS", "motores": 20, "ha": 12.74}, {"id": "6", "tipo": "PS", "motores": 18, "ha": 12.11}, {"id": "7", "tipo": "PS", "motores": 22, "ha": 15.0}, {"id": "8", "tipo": "PS", "motores": 19, "ha": 14.31}, {"id": "9", "tipo": "PS", "motores": 16, "ha": 10.64}, {"id": "10", "tipo": "PS", "motores": 19, "ha": 12.72}, {"id": "11", "tipo": "PS", "motores": 19, "ha": 16.81}, {"id": "12", "tipo": "PS", "motores": 17, "ha": 16.0}, {"id": "13", "tipo": "PS", "motores": 17, "ha": 10.9}, {"id": "14", "tipo": "PS", "motores": 9, "ha": 6.27}, {"id": "15", "tipo": "PS", "motores": 17, "ha": 10.91}, {"id": "16", "tipo": "PS", "motores": 24, "ha": 16.31}, {"id": "17", "tipo": "PS", "motores": 14, "ha": 8.49}, {"id": "18", "tipo": "PS", "motores": 15, "ha": 9.35}, {"id": "19", "tipo": "PS", "motores": 16, "ha": 10.43}, {"id": "20", "tipo": "PS", "motores": 13, "ha": 9.17}, {"id": "21", "tipo": "PS", "motores": 12, "ha": 7.9}, {"id": "22", "tipo": "PS", "motores": 11, "ha": 7.27}, {"id": "23", "tipo": "PS", "motores": 11, "ha": 7.43}, {"id": "24", "tipo": "PS", "motores": 15, "ha": 10.22}, {"id": "25", "tipo": "PS", "motores": 25, "ha": 15.51}, {"id": "26", "tipo": "PS", "motores": 15, "ha": 9.76}, {"id": "27", "tipo": "PS", "motores": 12, "ha": 7.41}, {"id": "28", "tipo": "PS", "motores": 16, "ha": 10.39}, {"id": "29", "tipo": "PS", "motores": 9, "ha": 5.73}, {"id": "30", "tipo": "PS", "motores": 8, "ha": 5.22}, {"id": "31", "tipo": "PS", "motores": 13, "ha": 6.72}, {"id": "32", "tipo": "PS", "motores": 15, "ha": 9.46}, {"id": "33", "tipo": "PS", "motores": 9, "ha": 5.89}, {"id": "34", "tipo": "PS", "motores": 14, "ha": 8.51}, {"id": "35", "tipo": "PS", "motores": 12, "ha": 6.56}, {"id": "36", "tipo": "PS", "motores": 18, "ha": 11.61}, {"id": "37", "tipo": "PS", "motores": 14, "ha": 8.69}, {"id": "38", "tipo": "PS", "motores": 16, "ha": 10.4}, {"id": "39", "tipo": "PS", "motores": 16, "ha": 9.43}, {"id": "40", "tipo": "PS", "motores": 13, "ha": 7.14}, {"id": "41", "tipo": "PS", "motores": 9, "ha": 6.06}, {"id": "42", "tipo": "PS", "motores": 16, "ha": 9.02}, {"id": "43", "tipo": "PS", "motores": 13, "ha": 8.72}, {"id": "Pc1", "tipo": "PC", "motores": 6, "ha": 3.0}, {"id": "Pc10", "tipo": "PC", "motores": 6, "ha": 2.29}, {"id": "Pc11", "tipo": "PC", "motores": 6, "ha": 1.75}, {"id": "Pc12", "tipo": "PC", "motores": 5, "ha": 2.06}, {"id": "Pc13", "tipo": "PC", "motores": 8, "ha": 3.54}, {"id": "Pc14", "tipo": "PC", "motores": 7, "ha": 2.53}, {"id": "Pc15", "tipo": "PC", "motores": 5, "ha": 1.77}, {"id": "Pc16", "tipo": "PC", "motores": 5, "ha": 1.32}, {"id": "Pc17", "tipo": "PC", "motores": 7, "ha": 3.16}, {"id": "Pc18", "tipo": "PC", "motores": 6, "ha": 2.14}, {"id": "Pc19", "tipo": "PC", "motores": 6, "ha": 2.8}, {"id": "Pc2", "tipo": "PC", "motores": 6, "ha": 2.91}, {"id": "Pc20", "tipo": "PC", "motores": 5, "ha": 1.57}, {"id": "Pc21", "tipo": "PC", "motores": 5, "ha": 2.02}, {"id": "Pc3", "tipo": "PC", "motores": 4, "ha": 2.24}, {"id": "Pc4", "tipo": "PC", "motores": 6, "ha": 3.16}, {"id": "Pc5", "tipo": "PC", "motores": 4, "ha": 2.7}, {"id": "Pc6", "tipo": "PC", "motores": 7, "ha": 3.06}, {"id": "Pc7", "tipo": "PC", "motores": 6, "ha": 2.04}, {"id": "Pc8", "tipo": "PC", "motores": 6, "ha": 3.15}, {"id": "Pc9", "tipo": "PC", "motores": 5, "ha": 2.0}], "ROLESA1": [{"id": "2", "tipo": "PS", "motores": 18, "ha": 10.45}, {"id": "6", "tipo": "PS", "motores": 22, "ha": 11.86}, {"id": "8", "tipo": "PS", "motores": 20, "ha": 10.73}, {"id": "9", "tipo": "PS", "motores": 19, "ha": 9.27}, {"id": "10", "tipo": "PS", "motores": 14, "ha": 7.24}, {"id": "11", "tipo": "PS", "motores": 16, "ha": 7.84}, {"id": "12", "tipo": "PS", "motores": 16, "ha": 7.76}, {"id": "13", "tipo": "PS", "motores": 16, "ha": 8.01}, {"id": "14", "tipo": "PS", "motores": 15, "ha": 7.28}, {"id": "15", "tipo": "PS", "motores": 19, "ha": 9.63}, {"id": "16", "tipo": "PS", "motores": 16, "ha": 8.11}, {"id": "17", "tipo": "PS", "motores": 13, "ha": 5.84}, {"id": "18", "tipo": "PS", "motores": 12, "ha": 6.45}, {"id": "19", "tipo": "PS", "motores": 14, "ha": 5.23}, {"id": "20", "tipo": "PS", "motores": 14, "ha": 6.24}, {"id": "21", "tipo": "PS", "motores": 13, "ha": 5.43}, {"id": "22", "tipo": "PS", "motores": 13, "ha": 6.43}, {"id": "23", "tipo": "PS", "motores": 13, "ha": 6.78}, {"id": "24", "tipo": "PS", "motores": 14, "ha": 7.37}, {"id": "25", "tipo": "PS", "motores": 16, "ha": 7.71}, {"id": "26", "tipo": "PS", "motores": 13, "ha": 6.45}, {"id": "27", "tipo": "PS", "motores": 12, "ha": 5.23}, {"id": "Pc19", "tipo": "PC", "motores": 5, "ha": 2.75}, {"id": "Pc1", "tipo": "PC", "motores": 3, "ha": 2.53}, {"id": "Pc14", "tipo": "PC", "motores": 5, "ha": 2.72}, {"id": "Pc2", "tipo": "PC", "motores": 4, "ha": 2.4}, {"id": "Pc23", "tipo": "PC", "motores": 5, "ha": 2.11}, {"id": "Pc3", "tipo": "PC", "motores": 5, "ha": 2.01}, {"id": "Pc6", "tipo": "PC", "motores": 4, "ha": 1.58}, {"id": "Pc9", "tipo": "PC", "motores": 5, "ha": 1.74}, {"id": "Zementerio", "tipo": "PS", "motores": 15, "ha": null}], "ROLESA2": [{"id": "1", "tipo": "PS", "motores": 18, "ha": 8.87}, {"id": "2", "tipo": "PS", "motores": 22, "ha": 10.96}, {"id": "3", "tipo": "PS", "motores": 24, "ha": 12.36}, {"id": "4", "tipo": "PS", "motores": 19, "ha": 9.55}, {"id": "5", "tipo": "PS", "motores": 19, "ha": 9.53}, {"id": "6", "tipo": "PS", "motores": 20, "ha": 10.79}, {"id": "7", "tipo": "PS", "motores": 23, "ha": 12.96}, {"id": "8", "tipo": "PS", "motores": 28, "ha": 15.21}, {"id": "9", "tipo": "PS", "motores": 18, "ha": 10.61}, {"id": "10", "tipo": "PS", "motores": 20, "ha": 9.93}, {"id": "11", "tipo": "PS", "motores": 15, "ha": 7.38}, {"id": "12", "tipo": "PS", "motores": 26, "ha": 13.93}, {"id": "13", "tipo": "PS", "motores": 26, "ha": 13.15}, {"id": "14", "tipo": "PS", "motores": 21, "ha": 10.69}, {"id": "15", "tipo": "PS", "motores": 16, "ha": 8.81}, {"id": "16", "tipo": "PS", "motores": 20, "ha": 10.61}, {"id": "18", "tipo": "PS", "motores": 18, "ha": 9.05}, {"id": "19", "tipo": "PS", "motores": 21, "ha": 11.38}, {"id": "20", "tipo": "PS", "motores": 24, "ha": 14.43}, {"id": "21", "tipo": "PS", "motores": 16, "ha": 8.32}, {"id": "22", "tipo": "PS", "motores": 17, "ha": 8.74}, {"id": "23", "tipo": "PS", "motores": 26, "ha": 12.95}, {"id": "24", "tipo": "PS", "motores": 16, "ha": 7.76}, {"id": "25", "tipo": "PS", "motores": 17, "ha": 8.39}, {"id": "26", "tipo": "PS", "motores": 8, "ha": 4.23}, {"id": "27", "tipo": "PS", "motores": 19, "ha": 8.97}, {"id": "28", "tipo": "PS", "motores": 18, "ha": 8.7}, {"id": "29", "tipo": "PS", "motores": 23, "ha": 12.59}, {"id": "30", "tipo": "PS", "motores": 8, "ha": 4.94}, {"id": "Pc1", "tipo": "PC", "motores": 6, "ha": 1.08}, {"id": "Pc10", "tipo": "PC", "motores": 5, "ha": 1.74}, {"id": "Pc11", "tipo": "PC", "motores": 4, "ha": 1.21}, {"id": "Pc12", "tipo": "PC", "motores": 6, "ha": 2.7}, {"id": "Pc13", "tipo": "PC", "motores": 6, "ha": 2.12}, {"id": "Pc16", "tipo": "PC", "motores": 3, "ha": 0.85}, {"id": "Pc18", "tipo": "PC", "motores": 9, "ha": 2.94}, {"id": "Pc22", "tipo": "PC", "motores": 6, "ha": 1.76}, {"id": "Pc24", "tipo": "PC", "motores": 6, "ha": 2.15}, {"id": "Pc25", "tipo": "PC", "motores": 5, "ha": 1.43}, {"id": "Pc27", "tipo": "PC", "motores": 5, "ha": 1.51}, {"id": "Pc29", "tipo": "PC", "motores": 4, "ha": 1.5}, {"id": "Pc3", "tipo": "PC", "motores": 5, "ha": 1.46}, {"id": "Pc5", "tipo": "PC", "motores": 5, "ha": 1.6}, {"id": "Pc8", "tipo": "PC", "motores": 9, "ha": 2.89}], "FIMASA1": [{"id": "2", "tipo": "PS", "motores": 19, "ha": 9.13}, {"id": "3", "tipo": "PS", "motores": 18, "ha": 8.9}, {"id": "4", "tipo": "PS", "motores": 18, "ha": 8.54}, {"id": "5", "tipo": "PS", "motores": 26, "ha": 12.17}, {"id": "6", "tipo": "PS", "motores": 22, "ha": 12.47}, {"id": "7", "tipo": "PS", "motores": 21, "ha": 10.24}, {"id": "8", "tipo": "PS", "motores": 16, "ha": 9.27}, {"id": "9", "tipo": "PS", "motores": 17, "ha": 8.5}, {"id": "10", "tipo": "PS", "motores": 25, "ha": 5.6}, {"id": "11", "tipo": "PS", "motores": 19, "ha": 5.25}, {"id": "12", "tipo": "PS", "motores": 12, "ha": 6.43}, {"id": "13", "tipo": "PS", "motores": 17, "ha": 10.74}, {"id": "14", "tipo": "PS", "motores": 15, "ha": 7.66}, {"id": "15", "tipo": "PS", "motores": 13, "ha": 6.9}, {"id": "16", "tipo": "PS", "motores": 36, "ha": 7.25}, {"id": "19", "tipo": "PS", "motores": 15, "ha": 6.9}, {"id": "20", "tipo": "PS", "motores": 12, "ha": 6.43}, {"id": "21", "tipo": "PS", "motores": 17, "ha": 8.5}, {"id": "1", "tipo": "PS", "motores": 8, "ha": 4.01}, {"id": "Pc10", "tipo": "PC", "motores": 12, "ha": 5.76}, {"id": "Pc11", "tipo": "PC", "motores": 7, "ha": 3.19}, {"id": "Pc14", "tipo": "PC", "motores": 4, "ha": 1.82}, {"id": "17", "tipo": "PS", "motores": 7, "ha": 3.38}, {"id": "Pc18", "tipo": "PC", "motores": 3, "ha": 1.09}, {"id": "Pc2", "tipo": "PC", "motores": 2, "ha": 1.5}, {"id": "Pc22", "tipo": "PC", "motores": 3, "ha": 1.22}, {"id": "Pc3", "tipo": "PC", "motores": 1, "ha": 0.74}, {"id": "Pc4", "tipo": "PC", "motores": 3, "ha": 0.95}, {"id": "Pc7", "tipo": "PC", "motores": 6, "ha": 2.96}, {"id": "Pc9", "tipo": "PC", "motores": 3, "ha": 3.1}], "FIMASA2": [{"id": "1", "tipo": "PS", "motores": 24, "ha": 12.94}, {"id": "2", "tipo": "PS", "motores": 12, "ha": 5.59}, {"id": "3", "tipo": "PS", "motores": 20, "ha": 9.02}, {"id": "4", "tipo": "PS", "motores": 11, "ha": 5.85}, {"id": "5", "tipo": "PS", "motores": 19, "ha": 9.2}, {"id": "6", "tipo": "PS", "motores": 14, "ha": 4.33}, {"id": "7", "tipo": "PS", "motores": 28, "ha": 13.07}, {"id": "8", "tipo": "PS", "motores": 29, "ha": 6.98}, {"id": "9", "tipo": "PS", "motores": 13, "ha": 7.0}, {"id": "10", "tipo": "PS", "motores": 18, "ha": 8.72}, {"id": "11", "tipo": "PS", "motores": 18, "ha": 7.85}, {"id": "13", "tipo": "PS", "motores": 21, "ha": 4.96}, {"id": "14", "tipo": "PS", "motores": 18, "ha": 5.57}, {"id": "15", "tipo": "PS", "motores": 27, "ha": 12.87}, {"id": "16", "tipo": "PS", "motores": 12, "ha": 7.0}, {"id": "17", "tipo": "PS", "motores": 18, "ha": 8.72}, {"id": "19", "tipo": "PS", "motores": 1, "ha": 4.96}, {"id": "Pc1", "tipo": "PC", "motores": 6, "ha": 1.74}, {"id": "Pc12", "tipo": "PC", "motores": 10, "ha": 2.68}, {"id": "Pc14", "tipo": "PC", "motores": 2, "ha": 2.46}, {"id": "Pc18", "tipo": "PC", "motores": 3, "ha": 1.29}, {"id": "Pc2", "tipo": "PC", "motores": 6, "ha": 3.18}, {"id": "Pc3", "tipo": "PC", "motores": 7, "ha": 2.9}, {"id": "Pc4", "tipo": "PC", "motores": 7, "ha": 1.59}, {"id": "Pc9", "tipo": "PC", "motores": 4, "ha": 1.7}], "RECORCHOLIS1": [{"id": "1", "tipo": "PS", "motores": 11, "ha": 5.86}, {"id": "2", "tipo": "PS", "motores": 12, "ha": 5.63}, {"id": "3", "tipo": "PS", "motores": 6, "ha": 3.75}, {"id": "4", "tipo": "PS", "motores": 8, "ha": 3.81}, {"id": "6", "tipo": "PS", "motores": 6, "ha": 3.02}, {"id": "7", "tipo": "PS", "motores": 6, "ha": 2.73}, {"id": "8", "tipo": "PS", "motores": 6, "ha": 2.58}, {"id": "9", "tipo": "PS", "motores": 6, "ha": 2.65}, {"id": "10", "tipo": "PS", "motores": 6, "ha": 2.62}, {"id": "12", "tipo": "PS", "motores": 6, "ha": 2.97}, {"id": "13", "tipo": "PS", "motores": 5, "ha": 2.48}, {"id": "14", "tipo": "PS", "motores": 5, "ha": 2.46}, {"id": "15", "tipo": "PS", "motores": 6, "ha": 2.87}, {"id": "17", "tipo": "PS", "motores": 8, "ha": 3.9}, {"id": "18", "tipo": "PS", "motores": 7, "ha": 3.59}, {"id": "19", "tipo": "PS", "motores": 8, "ha": 3.73}, {"id": "20", "tipo": "PS", "motores": 8, "ha": 3.48}, {"id": "21", "tipo": "PS", "motores": 7, "ha": 2.77}, {"id": "22", "tipo": "PS", "motores": 6, "ha": 2.9}, {"id": "23", "tipo": "PS", "motores": 6, "ha": 3.19}, {"id": "24", "tipo": "PS", "motores": 9, "ha": 4.5}, {"id": "26", "tipo": "PS", "motores": 11, "ha": 5.4}, {"id": "27", "tipo": "PS", "motores": 8, "ha": 3.75}, {"id": "28", "tipo": "PS", "motores": 6, "ha": 3.37}, {"id": "29", "tipo": "PS", "motores": 15, "ha": 8.18}, {"id": "30", "tipo": "PS", "motores": 7, "ha": 3.34}, {"id": "31", "tipo": "PS", "motores": 8, "ha": 3.91}, {"id": "32", "tipo": "PS", "motores": 8, "ha": 3.5}, {"id": "34", "tipo": "PS", "motores": 6, "ha": 2.35}, {"id": "35", "tipo": "PS", "motores": 6, "ha": 2.68}, {"id": "36", "tipo": "PS", "motores": 6, "ha": 2.93}, {"id": "37", "tipo": "PS", "motores": 6, "ha": 2.75}, {"id": "38", "tipo": "PS", "motores": 5, "ha": 2.77}, {"id": "39", "tipo": "PS", "motores": 7, "ha": 3.01}, {"id": "40", "tipo": "PS", "motores": 10, "ha": 5.4}, {"id": "Pc11", "tipo": "PC", "motores": 5, "ha": 2.37}, {"id": "Pc16", "tipo": "PC", "motores": 5, "ha": 2.47}, {"id": "Pc25", "tipo": "PC", "motores": 7, "ha": 3.75}, {"id": "Pc26", "tipo": "PC", "motores": 3, "ha": 1.3}, {"id": "Pc29", "tipo": "PC", "motores": 4, "ha": 1.72}, {"id": "Pc33", "tipo": "PC", "motores": 5, "ha": 2.3}, {"id": "Pc5", "tipo": "PC", "motores": 6, "ha": 2.77}], "RECORCHOLIS2": [], "FIMASA3": [{"id": "1", "tipo": "PS", "motores": 22, "ha": 8.24}, {"id": "2", "tipo": "PS", "motores": 30, "ha": 11.25}, {"id": "3", "tipo": "PS", "motores": 42, "ha": 13.93}, {"id": "4", "tipo": "PS", "motores": 32, "ha": 12.13}, {"id": "5", "tipo": "PS", "motores": 32, "ha": 12.15}, {"id": "6", "tipo": "PS", "motores": 25, "ha": 9.22}, {"id": "7", "tipo": "PS", "motores": 24, "ha": null}, {"id": "8", "tipo": "PS", "motores": 41, "ha": 14.68}, {"id": "9", "tipo": "PS", "motores": 38, "ha": 13.68}, {"id": "10", "tipo": "PS", "motores": 28, "ha": 10.7}, {"id": "11", "tipo": "PS", "motores": 22, "ha": 8.22}, {"id": "12", "tipo": "PS", "motores": 23, "ha": 8.46}, {"id": "13", "tipo": "PS", "motores": 26, "ha": 9.82}, {"id": "14", "tipo": "PS", "motores": 29, "ha": null}, {"id": "15", "tipo": "PS", "motores": 54, "ha": 19.99}, {"id": "16", "tipo": "PS", "motores": 39, "ha": null}, {"id": "17", "tipo": "PS", "motores": 36, "ha": 12.66}, {"id": "18", "tipo": "PS", "motores": 32, "ha": 11.88}, {"id": "19", "tipo": "PS", "motores": 31, "ha": 11.32}, {"id": "20", "tipo": "PS", "motores": 30, "ha": 10.31}, {"id": "21", "tipo": "PS", "motores": 30, "ha": 10.62}, {"id": "22", "tipo": "PS", "motores": 42, "ha": 15.8}, {"id": "23", "tipo": "PS", "motores": 30, "ha": null}, {"id": "24", "tipo": "PS", "motores": 30, "ha": 11.27}, {"id": "25", "tipo": "PS", "motores": 31, "ha": 11.08}, {"id": "26", "tipo": "PS", "motores": 30, "ha": 10.7}, {"id": "Pc1", "tipo": "PC", "motores": 5, "ha": 1.56}, {"id": "Pc2", "tipo": "PC", "motores": 3, "ha": 1.93}, {"id": "Pc3", "tipo": "PC", "motores": 8, "ha": 2.15}, {"id": "Pc4", "tipo": "PC", "motores": 5, "ha": 1.14}, {"id": "Pc5", "tipo": "PC", "motores": 5, "ha": 1.35}, {"id": "Pc6", "tipo": "PC", "motores": 5, "ha": 2.25}, {"id": "Pc7", "tipo": "PC", "motores": 5, "ha": 2.57}, {"id": "Pc8", "tipo": "PC", "motores": 7, "ha": 2.37}, {"id": "Pc9", "tipo": "PC", "motores": 5, "ha": 1.93}, {"id": "Pc10", "tipo": "PC", "motores": 6, "ha": 2.17}, {"id": "Pc11", "tipo": "PC", "motores": 8, "ha": 2.83}, {"id": "Pc12", "tipo": "PC", "motores": 5, "ha": 2.38}, {"id": "Pc13", "tipo": "PC", "motores": 6, "ha": 2.15}, {"id": "Pc14", "tipo": "PC", "motores": 4, "ha": 1.21}, {"id": "Pc15", "tipo": "PC", "motores": 4, "ha": 1.32}, {"id": "Pc16", "tipo": "PC", "motores": 6, "ha": 2.38}, {"id": "Pc17", "tipo": "PC", "motores": 6, "ha": 2.22}, {"id": "Pc18", "tipo": "PC", "motores": 5, "ha": 1.3}]};
+const PERSON_PISCINAS_IMPORT = {"CAESA2": {"p11": ["1", "Pc2", "2", "3", "4", "5", "Pc6", "6", "7"], "p3": ["Pc8", "8", "9", "Pc10", "10", "11", "Pc12", "12"], "p1": ["13", "Pc14", "14", "15", "Pc16", "16", "17", "Pc17", "18", "19", "Pc19", "20"], "p2": ["21", "Pc21", "22", "23", "Pc23", "24", "25", "Pc25", "26", "27"], "p5": ["Pc27", "28", "29", "51", "Pc30", "30", "31", "Pc32", "32"], "p6": ["33", "Pc33", "34", "35", "Pc36", "36", "37", "Pc37"], "p4": ["38", "39", "40", "Pc40", "41", "42", "Pc42", "43", "44", "Pc44", "45", "46", "Pc46", "47"]}, "CAESA1": {"p6": ["1", "Pc1", "2", "3", "21", "Pc4", "4"], "p5": ["5", "Pc5", "6", "22", "7", "Pc8", "8"], "p4": ["14", "Pc6", "17", "16", "15", "Pc15"], "p7": ["20", "13", "Pc12", "12", "Pc11", "11", "10"]}, "PANTRUSKO1": {"p3": ["Pc1", "2", "3", "Pc4", "4", "5", "Pc5"], "p1": ["6", "Pc7", "7", "8", "9", "Pc9", "10", "11", "12", "Pc12"]}, "ROLESA1": {"p3": ["Pc1", "8", "Pc9", "9", "10", "11", "12", "2", "Pc6", "6", "17", "18", "Pc3", "26", "27"], "p2": ["13", "14", "Pc14", "15", "Pc2", "16", "25"], "p4": ["19", "Pc19", "20", "21", "22", "23", "Pc23", "24"]}, "FIMASA1": {"p6": ["2", "3", "4", "1", "Pc2", "Pc3", "Pc4", "Pc18", "5"], "p1": ["6", "7", "8", "Pc22", "9", "10"], "p5": ["11", "21", "12", "20", "Pc10", "Pc14", "Pc11", "22", "23"], "p2": ["13", "14", "15", "16", "19", "17", "Pc16", "24"]}, "FIMASA2": {"p4": ["1", "2", "Pc18", "3", "Pc2", "4", "18"], "p5": ["5", "6", "7", "8", "Pc7", "21"], "p7": ["9", "16", "Pc9", "10", "17", "Pc3", "11", "Pc12"], "p3": ["13", "19", "14", "15", "Pc1", "Pc4", "Pc14", "20"]}, "ROLESA2": {"p5": ["Pc1", "1", "2", "3", "Pc3", "5"], "p1": ["4", "Pc5", "6", "7", "Pc8", "8", "10", "11", "Pc11"], "p9": ["9", "Pc10", "12", "Pc12", "14", "Pc13"], "p6": ["13", "15", "16", "Pc16", "18", "19", "Pc18"], "p2": ["20", "21", "22", "Pc22", "23", "Pc24", "Pc25"], "p7": ["24", "25", "26", "30", "27", "Pc27", "28", "29", "Pc29"]}, "RECORCHOLIS2": {"p2": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "Pc1", "Pc13"], "p3": ["10", "11", "12", "13", "14", "15", "16", "17", "19", "20", "21", "22", "24", "25", "Pc4", "Pc9"], "p1": ["26", "27", "28", "29", "30", "31", "Pc18", "Pc23", "Pc27", "Pc29"]}, "FIMASA3": {"p13": ["7", "Pc5", "8"], "p15": ["Pc18", "1", "Pc1", "2"], "p17": ["3", "Pc2", "4", "Pc9", "Pc10", "15"], "p11": ["Pc3", "5", "6", "Pc4"], "p1": ["9", "Pc6", "10"], "p9": ["26", "Pc7", "11", "Pc8"], "p16": ["12", "13", "14"], "p7": ["16", "17", "Pc11"], "p4": ["18", "19"], "p10": ["20", "Pc12", "Pc13", "21", "Pc14"], "p18": ["22", "23"], "p5": ["24", "Pc16", "Pc17", "25"]}, "PANTRUSKO2": {"p4": ["1", "Pc1", "2", "3", "Pc2", "4"], "p6": ["9", "Pc5", "10", "11", "Pc6", "12"], "p11": ["13", "Pc7", "14", "15", "Pc8", "16"], "p12": ["17", "Pc9", "18", "19", "Pc10", "20", "21", "Pc11", "22", "23", "24", "Pc12"], "p1": ["25", "Pc13", "26", "Pc14", "27", "28", "Pc15", "29", "30"], "p8": ["Pc16", "31", "32", "Pc17", "33", "34", "35", "Pc18", "36"], "p7": ["37", "38", "Pc19", "39", "40", "Pc20", "41", "42", "Pc21", "43"]}, "RECORCHOLIS1": {"p4": ["Pc29", "28", "27", "26", "Pc26", "40", "29", "30"], "p1": ["1", "2", "3", "4", "Pc5", "6", "7", "8", "9"], "p5": ["10", "Pc11", "12", "13", "14", "15", "Pc16", "17", "18", "19", "20"], "p2": ["31", "32", "Pc33", "34", "35", "36", "37", "38", "39"]}};
+const NEW_PISCINAS_IMPORT = {"FIMASA1": [{"id": "22", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "23", "tipo": "PS", "motores": 12, "ha": 0}, {"id": "Pc16", "tipo": "PC", "motores": 4, "ha": 0}, {"id": "24", "tipo": "PS", "motores": 13, "ha": 0}], "FIMASA2": [{"id": "18", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "Pc7", "tipo": "PC", "motores": 4, "ha": 0}, {"id": "21", "tipo": "PS", "motores": 12, "ha": 0}, {"id": "20", "tipo": "PS", "motores": 12, "ha": 0}], "RECORCHOLIS2": [{"id": "1", "tipo": "PS", "motores": 16, "ha": 0}, {"id": "2", "tipo": "PS", "motores": 12, "ha": 0}, {"id": "3", "tipo": "PS", "motores": 13, "ha": 0}, {"id": "4", "tipo": "PS", "motores": 12, "ha": 0}, {"id": "5", "tipo": "PS", "motores": 17, "ha": 0}, {"id": "6", "tipo": "PS", "motores": 22, "ha": 0}, {"id": "7", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "8", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "9", "tipo": "PS", "motores": 10, "ha": 0}, {"id": "10", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "11", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "12", "tipo": "PS", "motores": 9, "ha": 0}, {"id": "13", "tipo": "PS", "motores": 8, "ha": 0}, {"id": "14", "tipo": "PS", "motores": 10, "ha": 0}, {"id": "15", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "16", "tipo": "PS", "motores": 10, "ha": 0}, {"id": "17", "tipo": "PS", "motores": 9, "ha": 0}, {"id": "19", "tipo": "PS", "motores": 10, "ha": 0}, {"id": "20", "tipo": "PS", "motores": 9, "ha": 0}, {"id": "21", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "22", "tipo": "PS", "motores": 8, "ha": 0}, {"id": "24", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "25", "tipo": "PS", "motores": 15, "ha": 0}, {"id": "26", "tipo": "PS", "motores": 16, "ha": 0}, {"id": "27", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "28", "tipo": "PS", "motores": 17, "ha": 0}, {"id": "29", "tipo": "PS", "motores": 11, "ha": 0}, {"id": "30", "tipo": "PS", "motores": 10, "ha": 0}, {"id": "31", "tipo": "PS", "motores": 7, "ha": 0}, {"id": "Pc1", "tipo": "PC", "motores": 5, "ha": 0}, {"id": "Pc4", "tipo": "PC", "motores": 5, "ha": 0}, {"id": "Pc9", "tipo": "PC", "motores": 4, "ha": 0}, {"id": "Pc13", "tipo": "PC", "motores": 4, "ha": 0}, {"id": "Pc18", "tipo": "PC", "motores": 7, "ha": 0}, {"id": "Pc23", "tipo": "PC", "motores": 9, "ha": 0}, {"id": "Pc27", "tipo": "PC", "motores": 5, "ha": 0}, {"id": "Pc29", "tipo": "PC", "motores": 5, "ha": 0}]};
+const PANTRUSKO2_SECTORS_IMPORT = {"1": "Granjas marinas", "Pc1": "Granjas marinas", "2": "Granjas marinas", "3": "Granjas marinas", "Pc2": "Granjas marinas", "4": "Granjas marinas", "5": "Granjas marinas", "Pc3": "Granjas marinas", "6": "Granjas marinas", "7": "Granjas marinas", "Pc4": "Granjas marinas", "8": "Granjas marinas", "9": "Granjas marinas", "Pc5": "Granjas marinas", "10": "Granjas marinas", "11": "Granjas marinas", "Pc6": "Granjas marinas", "12": "Granjas marinas", "13": "Granjas marinas", "Pc7": "Granjas marinas", "14": "Granjas marinas", "15": "Granjas marinas", "Pc8": "Granjas marinas", "16": "Granjas marinas", "17": "Banarco / Puerto Concha", "Pc9": "Banarco / Puerto Concha", "18": "Banarco / Puerto Concha", "19": "Banarco / Puerto Concha", "Pc10": "Banarco / Puerto Concha", "20": "Banarco / Puerto Concha", "21": "Banarco / Puerto Concha", "Pc11": "Banarco / Puerto Concha", "22": "Banarco / Puerto Concha", "23": "Banarco / Puerto Concha", "24": "Banarco / Puerto Concha", "Pc12": "Banarco / Puerto Concha", "25": "Banarco / Puerto Concha", "Pc13": "Banarco / Puerto Concha", "26": "Banarco / Puerto Concha", "Pc14": "Banarco / Puerto Concha", "27": "Banarco / Puerto Concha", "28": "Banarco / Puerto Concha", "Pc15": "Banarco / Puerto Concha", "29": "Banarco / Puerto Concha", "30": "Banarco / Puerto Concha", "Pc16": "Banarco / Puerto Concha", "31": "Banarco / Puerto Concha", "32": "Banarco / Puerto Concha", "Pc17": "Banarco / Puerto Concha", "33": "Banarco / Puerto Concha", "34": "Banarco / Puerto Concha", "35": "Banarco / Puerto Concha", "Pc18": "Banarco / Puerto Concha", "36": "Banarco / Puerto Concha", "37": "Curco", "38": "Curco", "Pc19": "Curco", "39": "Curco", "40": "Curco", "Pc20": "Curco", "41": "Curco", "42": "Curco", "Pc21": "Curco", "43": "Curco"};
+const TALLER_IMPORT = {"CAESA2": 8, "CAESA1": 2, "PANTRUSKO1": 3, "ROLESA1": 10, "ROLESA2": 0, "FIMASA1": 1, "FIMASA2": 0, "FIMASA3": 3, "PANTRUSKO2": 1, "RECORCHOLIS1": 4, "RECORCHOLIS2": 0};
+const SEED_PERSONAL = {"CAESA2": [{"nombre": "Angelo Isaac Zapatier Mancilla", "cedula": "1206627422", "cargo": "Operador", "fechaIngreso": "2025-09-24", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Benito Eduardo Fernandez España", "cedula": "956119515", "cargo": "Operador", "fechaIngreso": "2026-02-05", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Daniel Enrique Leon Chaguay", "cedula": "1206936591", "cargo": "Operador", "fechaIngreso": "2024-04-29", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Ramon Salvador Paredes Macay", "cedula": "1316639853", "cargo": "Operador", "fechaIngreso": "2026-06-25", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Davis Joel Bethancourt Guerra", "cedula": "1208186898", "cargo": "Operador", "fechaIngreso": "2025-02-26", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Marcos Andres Gonzales Quiñones", "cedula": "850346297", "cargo": "Operador", "fechaIngreso": "2026-07-20", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Hugo Alberto Troya Choez", "cedula": "1208289122", "cargo": "Operador", "fechaIngreso": "2025-08-08", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Wellington Jose Delgado Jimenez", "cedula": "1729920809", "cargo": "Operador", "fechaIngreso": "2026-06-29", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Jorge Manuel Mendoza Bazan", "cedula": "1208220762", "cargo": "Operador", "fechaIngreso": "2025-10-29", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}, {"nombre": "Luciano Vicente Jara Sanchez", "cedula": "1708693500", "cargo": "Operador", "fechaIngreso": "2021-05-20", "novedad": "", "id": "p10", "activo": true, "estado": "Trabajando"}, {"nombre": "Diego Oswaldo Herrera Garcia", "cedula": "941366775", "cargo": "Operador", "fechaIngreso": "2026-04-30", "novedad": "", "id": "p11", "activo": true, "estado": "Trabajando"}, {"nombre": "Andy Gabriel Jimenez Jimenez", "cedula": "942851692", "cargo": "Mecánico", "fechaIngreso": "2025-01-23", "novedad": "", "id": "p12", "activo": true, "estado": "Trabajando"}, {"nombre": "Jairo Dario Montenegro Toala", "cedula": "1755154398", "cargo": "Mecánico", "fechaIngreso": "2024-10-22", "novedad": "", "id": "p13", "activo": true, "estado": "Trabajando"}, {"nombre": "Manuel Leonel Garcia Guagua", "cedula": "804136653", "cargo": "Operador", "fechaIngreso": "2025-03-10", "novedad": "", "id": "p14", "activo": true, "estado": "Trabajando"}, {"nombre": "REEMPLAZAR", "cedula": "", "cargo": "Operador", "fechaIngreso": null, "novedad": "", "id": "p15", "activo": true, "estado": "Trabajando"}, {"nombre": "Frowen Moises Zambrano Zambrano", "cedula": "928693001", "cargo": "Operador", "fechaIngreso": "2025-07-02", "novedad": "", "id": "p16", "activo": true, "estado": "Trabajando"}], "CAESA1": [{"nombre": "Alexander Humberto Chiriguaya Moran", "cedula": "957281330", "cargo": "Operador", "fechaIngreso": "2026-01-17", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Carlos Aurelio Olvera Romero", "cedula": "940987225", "cargo": "Operador", "fechaIngreso": "2026-02-14", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Edinson Adrian Sanchez Benites", "cedula": "1206925149", "cargo": "Operador", "fechaIngreso": "2026-02-14", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jonathan Antonio Valencia Salazar", "cedula": "1311410409", "cargo": "Operador", "fechaIngreso": "2026-06-18", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Danny Marcelo Choez Sanchez", "cedula": "928853936", "cargo": "Operador", "fechaIngreso": "2026-05-05", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Enrique Intriago Intriago", "cedula": "1313379826", "cargo": "Operador", "fechaIngreso": "2026-07-23", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Juan Carlos Muñoz Cerezo", "cedula": "1207210129", "cargo": "Operador", "fechaIngreso": "2026-07-08", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Milton Miguel Garcia Garcia", "cedula": "8023900740", "cargo": "Mecánico", "fechaIngreso": "2022-06-14", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Byron Danilo Leon Tola", "cedula": "953831765", "cargo": "Mecánico", "fechaIngreso": "2025-02-22", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}], "PANTRUSKO1": [{"nombre": "Jefferson Manuel Valencia Garces", "cedula": "801737602", "cargo": "Operador", "fechaIngreso": "2026-03-31", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Joshue Antonio Demera Demera", "cedula": "1351690084", "cargo": "Operador", "fechaIngreso": "2026-05-26", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Joaquin Carriel Cedeño", "cedula": "1729773489", "cargo": "Operador", "fechaIngreso": "2026-07-14", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Divan Javier Demera Vera", "cedula": "1351641657", "cargo": "Mecánico", "fechaIngreso": "2026-07-21", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}], "PANTRUSKO2": [{"nombre": "Mario Enrique Merchan Chonillo", "cedula": "929717791", "cargo": "Operador", "fechaIngreso": "2026-03-28", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Eric Johan Cedeño Vera", "cedula": "941058133", "cargo": "Operador", "fechaIngreso": "2026-07-22", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Geovanny Anastacio Alvarez Carcamo", "cedula": "1717810905", "cargo": "Operador", "fechaIngreso": "2026-01-14", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jefferson Rodolfo Nuñez Murillo", "cedula": "605846252", "cargo": "Operador", "fechaIngreso": "2025-10-02", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "jonathan joel moreira cortez", "cedula": "850569195", "cargo": "Operador", "fechaIngreso": "2025-05-02", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Luis Geovanny Zambrano Sudario", "cedula": "1311155079", "cargo": "Operador", "fechaIngreso": "2026-06-27", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Marco Juliano Aviles Lara", "cedula": "942647959", "cargo": "Operador", "fechaIngreso": "2026-04-02", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Melinton Raul Quiñonez Castillo", "cedula": "804278570", "cargo": "Operador", "fechaIngreso": "2025-01-08", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Michael Jordan Solorzano Manzaba", "cedula": "1727313874", "cargo": "Operador", "fechaIngreso": "2026-04-24", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}, {"nombre": "Willington Eduardo Pilay Dominguez", "cedula": "2400286031", "cargo": "Operador", "fechaIngreso": "2025-10-01", "novedad": "", "id": "p10", "activo": true, "estado": "Trabajando"}, {"nombre": "Wilther Gabriel Conforme Vargas", "cedula": "1315123289", "cargo": "Operador", "fechaIngreso": "2025-02-28", "novedad": "", "id": "p11", "activo": true, "estado": "Trabajando"}, {"nombre": "Luigi Eduardo Holguin Bacilio", "cedula": "2400072951", "cargo": "Operador", "fechaIngreso": "2026-07-07", "novedad": "", "id": "p12", "activo": true, "estado": "Trabajando"}, {"nombre": "Darwin Yiminson Barco Vera", "cedula": "928370287", "cargo": "Mecánico", "fechaIngreso": "2025-03-17", "novedad": "", "id": "p13", "activo": true, "estado": "Trabajando"}, {"nombre": "Yoer Augusto Barzola Castro", "cedula": "956092589", "cargo": "Mecánico", "fechaIngreso": "2022-04-14", "novedad": "", "id": "p14", "activo": true, "estado": "Trabajando"}], "ROLESA1": [{"nombre": "Byron Bernardo Velez Alvarado", "cedula": "1250547765", "cargo": "Operador", "fechaIngreso": "2026-01-16", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Justin Alexis Varas Alvario", "cedula": "1208181840", "cargo": "Operador", "fechaIngreso": "2026-06-03", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Jorge Eduardo Fajardo Garcia", "cedula": "1207648211", "cargo": "Operador", "fechaIngreso": "2025-06-13", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Rigoberto Quintero Leones", "cedula": "1310420631", "cargo": "Operador", "fechaIngreso": "2026-03-02", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Washington Duberly Solorzano Posligua", "cedula": "1207382027", "cargo": "Operador", "fechaIngreso": "2026-07-20", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Kevin Joffre Calle Bajaña", "cedula": "943053132", "cargo": "Operador", "fechaIngreso": "2026-01-17", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Luis Alberto Camacho Zambrano", "cedula": "1203708589", "cargo": "Operador", "fechaIngreso": "2025-05-12", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Jefferson Andres Lucas Falcones", "cedula": "1315238624", "cargo": "Mecánico", "fechaIngreso": "2025-02-27", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Elvin Orlando Aveiga Aveiga", "cedula": "2350486573", "cargo": "Operador", "fechaIngreso": "2025-11-20", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}], "ROLESA2": [{"nombre": "Antonio Auxiliador Mendoza Vera", "cedula": "1311071532", "cargo": "Operador", "fechaIngreso": "2022-10-11", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Cesar Andres Mendoza Rodriguez", "cedula": "1310737935", "cargo": "Operador", "fechaIngreso": "2025-11-13", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Richard Eduardo Balladares Chichanda", "cedula": "928602739", "cargo": "Operador", "fechaIngreso": "2026-07-03", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jaime Andres Guilindro Rodriguez", "cedula": "940756570", "cargo": "Operador", "fechaIngreso": "2025-03-27", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Jonathan Andres Valencia Bonilla", "cedula": "1315142164", "cargo": "Operador", "fechaIngreso": "2025-03-26", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Jorge Luis Carrillo Murillo", "cedula": "1314097773", "cargo": "Operador", "fechaIngreso": "2025-03-26", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Abraham Castro Lozano", "cedula": "940464910", "cargo": "Operador", "fechaIngreso": "2025-03-27", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Leider Artemio Simisterra Portocarrero", "cedula": "802650622", "cargo": "Operador", "fechaIngreso": "2022-09-22", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Ronald Riffer Añapa Añapa", "cedula": "803970052", "cargo": "Operador", "fechaIngreso": "2026-04-17", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}, {"nombre": "Adrian Charly Simarron Quevedo", "cedula": "803972793", "cargo": "Operador", "fechaIngreso": "2026-05-08", "novedad": "", "id": "p10", "activo": true, "estado": "Trabajando"}, {"nombre": "Rudy Dael Sanchez Ortiz", "cedula": "952506509", "cargo": "Mecánico", "fechaIngreso": "2024-11-07", "novedad": "", "id": "p11", "activo": true, "estado": "Trabajando"}, {"nombre": "Eduardo Antonio Suarez Gutierrez", "cedula": "1207094846", "cargo": "Mecánico", "fechaIngreso": "2024-11-27", "novedad": "", "id": "p12", "activo": true, "estado": "Trabajando"}], "FIMASA1": [{"nombre": "Alex Edgar Cujilan Montece", "cedula": "1205509837", "cargo": "Operador", "fechaIngreso": "2026-02-17", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Edwin Antonio Lopez Suarez", "cedula": "1250199393", "cargo": "Operador", "fechaIngreso": "2025-05-02", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Vicenta Carlos Chica Cedeño", "cedula": "929580991", "cargo": "Operador", "fechaIngreso": "2026-07-24", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jorge David Gomez Triana", "cedula": "1208560480", "cargo": "Operador", "fechaIngreso": "2025-12-31", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Antonio Demera Mero", "cedula": "1312033077", "cargo": "Operador", "fechaIngreso": "2025-04-26", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Rolando Alexander Mejia Lopez", "cedula": "1314933175", "cargo": "Operador", "fechaIngreso": "2025-03-30", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Wingston Soul Tomala Guerrero", "cedula": "909863938", "cargo": "Operador", "fechaIngreso": "2025-03-31", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "PENDIENTE", "cedula": "", "cargo": "Mecánico", "fechaIngreso": null, "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Francisco Fernando Morales Vacusoy", "cedula": "1208094191", "cargo": "Mecánico", "fechaIngreso": "2025-04-12", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}], "FIMASA2": [{"nombre": "Carlos Daniel Reyez Pluas", "cedula": "957176654", "cargo": "Operador", "fechaIngreso": "2024-11-16", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Edwin Alexander Mero Rosado", "cedula": "1312508359", "cargo": "Operador", "fechaIngreso": "2026-04-23", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Hector Luis Reyes Zambrano", "cedula": "1313379941", "cargo": "Operador", "fechaIngreso": "2025-12-31", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Miguel Macias Burgos", "cedula": "1313488643", "cargo": "Operador", "fechaIngreso": "2025-03-20", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Luis Alberto Sanchez Delgado", "cedula": "1208617603", "cargo": "Operador", "fechaIngreso": "2026-02-09", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Nativo Fermin Cedeño Rodriguez", "cedula": "917312696", "cargo": "Operador", "fechaIngreso": "2021-08-09", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Antonhony Gabri Peña Litardo", "cedula": "1208922037", "cargo": "Operador", "fechaIngreso": "2026-06-25", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Javier Paredes Macay", "cedula": "1315223030", "cargo": "Mecánico", "fechaIngreso": "2025-02-18", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Cristhian Ivan Zambrano Montes", "cedula": "941183675", "cargo": "Mecánico", "fechaIngreso": "2025-04-01", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}], "RECORCHOLIS1": [{"nombre": "Enrique Nicolas Zambrano Suarez", "cedula": "1204725939", "cargo": "Operador", "fechaIngreso": "2026-04-21", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Jonathan Andres Muentes Centeno", "cedula": "1315682664", "cargo": "Operador", "fechaIngreso": "2026-07-07", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Jimmy Antonio Martinez Conforme", "cedula": "1313978973", "cargo": "Operador", "fechaIngreso": "2026-04-18", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Joffre Emiliano Macias Tomala", "cedula": "940891229", "cargo": "Operador", "fechaIngreso": "2026-03-28", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Patricio Ismael Miranda Rengifo", "cedula": "1725353039", "cargo": "Operador", "fechaIngreso": "2026-04-01", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Juan Carlos Demera Solorzano", "cedula": "1311862401", "cargo": "Mecánico", "fechaIngreso": "2025-03-17", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Geovanny Francico Pinto Avila", "cedula": "1313900282", "cargo": "Mecánico", "fechaIngreso": "2024-08-19", "novedad": "", "id": "p10", "activo": true, "estado": "Trabajando"}], "RECORCHOLIS2": [{"nombre": "Andy Ariel Vera Sosa", "cedula": "804861458", "cargo": "Operador", "fechaIngreso": "2026-03-09", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Ignacio Vega Demera", "cedula": "1314155530", "cargo": "Operador", "fechaIngreso": "2025-09-19", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Alex Arturo Garces Sanchez", "cedula": "929099943", "cargo": "Operador", "fechaIngreso": "2026-07-24", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Roque Roberto Zambrano Medranda", "cedula": "921355053", "cargo": "Mecánico", "fechaIngreso": "2022-01-11", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Merelo Merelo Carlos Manuel", "cedula": "944296292", "cargo": "Mecánico", "fechaIngreso": "2025-03-07", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}], "FIMASA3": [{"nombre": "Jackson Liberman camacho Delgado", "cedula": "850176074", "cargo": "Operador", "fechaIngreso": "2026-07-22", "novedad": "", "id": "p1", "activo": true, "estado": "Trabajando"}, {"nombre": "Anderson Javier Delgado Aviles", "cedula": "928675131", "cargo": "Operador", "fechaIngreso": "2025-12-30", "novedad": "", "id": "p2", "activo": true, "estado": "Trabajando"}, {"nombre": "Cesar Andres Angulo Tufiño", "cedula": "803103332", "cargo": "Operador", "fechaIngreso": "2025-02-27", "novedad": "", "id": "p3", "activo": true, "estado": "Trabajando"}, {"nombre": "Dylan Gabriel Tamayo Garcia", "cedula": "805346921", "cargo": "Operador", "fechaIngreso": "2025-09-16", "novedad": "", "id": "p4", "activo": true, "estado": "Trabajando"}, {"nombre": "Joffre Leonardo Lascano Rodriguez", "cedula": "1315235695", "cargo": "Operador", "fechaIngreso": "2026-02-18", "novedad": "", "id": "p5", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Guillermo Gomez Cedeño", "cedula": "1350696421", "cargo": "Operador", "fechaIngreso": "2026-04-17", "novedad": "", "id": "p6", "activo": true, "estado": "Trabajando"}, {"nombre": "Bryan Steeven Rodriguez Rodriguez", "cedula": "1351752496", "cargo": "Operador", "fechaIngreso": "2026-05-14", "novedad": "", "id": "p7", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose David Domo Pinargote", "cedula": "1351347941", "cargo": "Operador", "fechaIngreso": "2026-05-15", "novedad": "", "id": "p8", "activo": true, "estado": "Trabajando"}, {"nombre": "Anyelo Hernan Zambrano Estupiñan", "cedula": "803618917", "cargo": "Operador", "fechaIngreso": "2024-07-21", "novedad": "", "id": "p9", "activo": true, "estado": "Trabajando"}, {"nombre": "Ronny Juan Jaime Cunuhay", "cedula": "550294219", "cargo": "Operador", "fechaIngreso": "2026-03-21", "novedad": "", "id": "p10", "activo": true, "estado": "Trabajando"}, {"nombre": "Wilson Francisco Jimenez Mora", "cedula": "1208459311", "cargo": "Operador", "fechaIngreso": "2026-04-22", "novedad": "", "id": "p11", "activo": true, "estado": "Trabajando"}, {"nombre": "Marcos Ernesto Rivera Guilindro", "cedula": "952368140", "cargo": "Operador", "fechaIngreso": "2026-05-16", "novedad": "", "id": "p12", "activo": true, "estado": "Trabajando"}, {"nombre": "Carlos Luis Guilindro Coello", "cedula": "928673623", "cargo": "Operador", "fechaIngreso": "2026-06-30", "novedad": "", "id": "p13", "activo": true, "estado": "Trabajando"}, {"nombre": "Peter Oswaldo Aveiga Loor", "cedula": "1205288374", "cargo": "Operador", "fechaIngreso": "2026-07-03", "novedad": "", "id": "p14", "activo": true, "estado": "Trabajando"}, {"nombre": "Alex Santiago Ramos Mendoza", "cedula": "2300805468", "cargo": "Operador", "fechaIngreso": "2026-07-01", "novedad": "", "id": "p15", "activo": true, "estado": "Trabajando"}, {"nombre": "Javier Antonio Romero Diaz", "cedula": "1721803078", "cargo": "Operador", "fechaIngreso": "2026-07-07", "novedad": "", "id": "p16", "activo": true, "estado": "Trabajando"}, {"nombre": "Johnny Gilberto Valero Arias", "cedula": "1251486401", "cargo": "Operador", "fechaIngreso": "2026-07-07", "novedad": "", "id": "p17", "activo": true, "estado": "Trabajando"}, {"nombre": "Jonathan Alfredo Zambrano Alcivar", "cedula": "957358880", "cargo": "Operador", "fechaIngreso": "2026-07-10", "novedad": "", "id": "p18", "activo": true, "estado": "Trabajando"}, {"nombre": "Jose Elvis Coello Coello", "cedula": "940463425", "cargo": "Mecánico", "fechaIngreso": "2026-04-17", "novedad": "", "id": "p19", "activo": true, "estado": "Trabajando"}, {"nombre": "Edison Miguel Coello Cabrera", "cedula": "1729829273", "cargo": "Mecánico", "fechaIngreso": "2026-07-23", "novedad": "", "id": "p20", "activo": true, "estado": "Trabajando"}, {"nombre": "Eli Martin Solorzano Andrade", "cedula": "1314184068", "cargo": "Mecánico", "fechaIngreso": "2026-07-10", "novedad": "", "id": "p21", "activo": true, "estado": "Trabajando"}]};
+const ESTADOS = ["EN CAMPAMENTO","LIBRE","PERMISO MEDICO","VACACIONES","RENUNCIA","FALTA INJUSTIFICADA"];
+const ESTADO_CODE = {"EN CAMPAMENTO":"","LIBRE":"L","PERMISO MEDICO":"PM","VACACIONES":"VAC","RENUNCIA":"RENUNCIA","FALTA INJUSTIFICADA":"FALTA"};
+const ESTADO_DIARIO_A_PERSISTENTE = {"EN CAMPAMENTO":"Trabajando","LIBRE":"Libre","PERMISO MEDICO":"Permiso médico","VACACIONES":"Vacaciones","RENUNCIA":"Renunció","FALTA INJUSTIFICADA":"Trabajando"};
+const ESTADO_PERSISTENTE_A_DIARIO = {"Trabajando":"EN CAMPAMENTO","Libre":"LIBRE","Permiso médico":"PERMISO MEDICO","Vacaciones":"VACACIONES","Renunció":"RENUNCIA"};
+
+/* =============== URL / MODE =============== */
+const params = new URLSearchParams(location.search);
+const URL_CAMPO = params.get('campo');
+let MODE = URL_CAMPO ? 'campo' : 'admin';
+let currentSection = MODE==='campo' ? 'registro' : 'dashboard';
+let currentCampAdmin = null; // camp selected in admin "Registro" view
+
+/* =============== STATE =============== */
+let CAMPS = [];
+let PISCINAS = {};   // slug -> [{id,tipo,motores,ha,sector?}]
+let PERSONAL = {};   // slug -> [{id,nombre,cedula,cargo,fechaIngreso,activo,novedad,piscinas?}]
+let TALLER = {};     // slug -> cantidad de aireadores en taller por reparación mayor
+let REPORT_CACHE = {}; // "slug|date" -> report obj
+
+function todayStr(){
+  const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+}
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(iso){ if(!iso) return '-'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+
+/* =============== STORAGE HELPERS (Firebase Realtime Database) =============== */
+const FB_URL = 'https://aireadores-caesa-default-rtdb.firebaseio.com';
+
+// Firebase convierte objetos con claves 0,1,2,... a arrays.
+// Esta función los revierte a objeto con claves como strings.
+function normalizePiscinasObj(piscinas){
+  if(!piscinas || typeof piscinas !== 'object') return {};
+  if(!Array.isArray(piscinas)) return piscinas;
+  // Firebase coerced integer-keyed object → restore as {index: value}
+  const obj = {};
+  piscinas.forEach((v,i)=>{ if(v!=null) obj[String(i)] = v; });
+  return obj;
+}
+
+async function fetchWithTimeout(url, opts, ms){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms || 10000);
+  try{
+    return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal }));
+  } finally { clearTimeout(t); }
+}
+
+function keyToFbPath(key){
+  if(key === 'config:camps')         return 'camps';
+  if(key === 'roster:personal:all')  return 'personal';
+  if(key === 'roster:piscinas:all')  return 'piscinas';
+  if(key === 'db:initialized:v1')    return 'db_initialized';
+  if(key === 'config:taller')        return 'taller';
+  if(key.startsWith('report:')){
+    const parts = key.split(':');
+    return 'reportes/'+parts[1]+'/'+parts[2];
+  }
+  return key.replace(/:/g,'_');
+}
+
+async function sget(key){
+  try{
+    const res = await fetchWithTimeout(FB_URL+'/'+keyToFbPath(key)+'.json?_ts='+Date.now());
+    if(!res.ok){ console.error('firebase get failed', key, res.status); return null; }
+    return await res.json(); // devuelve null si no existe
+  }catch(e){ console.error('firebase get failed', key, e); return null; }
+}
+
+async function sset(key, val){
+  try{
+    const res = await fetchWithTimeout(FB_URL+'/'+keyToFbPath(key)+'.json', {
+      method: 'PUT',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(val)
+    });
+    if(!res.ok){
+      const err = await res.text();
+      console.error('firebase set failed', key, res.status, err);
+      window._lastSsetError = 'HTTP '+res.status+': '+err.slice(0,200);
+      return null;
+    }
+    window._lastSsetError = null;
+    return true;
+  }catch(e){
+    console.error('firebase set failed', key, e);
+    window._lastSsetError = 'Error de red: '+String(e);
+    return null;
+  }
+}
+
+async function slist(prefix){
+  // Solo se usa para prefix='report:' (borrar reportes en debug)
+  if(prefix === 'report:'){
+    try{
+      const res = await fetchWithTimeout(FB_URL+'/reportes.json?shallow=true&_ts='+Date.now());
+      if(!res.ok) return [];
+      const slugs = await res.json();
+      if(!slugs) return [];
+      const keys = [];
+      for(const slug of Object.keys(slugs)){
+        const r2 = await fetchWithTimeout(FB_URL+'/reportes/'+slug+'.json?shallow=true');
+        if(!r2.ok) continue;
+        const dates = await r2.json();
+        if(!dates) continue;
+        for(const date of Object.keys(dates)) keys.push('report:'+slug+':'+date);
+      }
+      return keys;
+    }catch(e){ return []; }
+  }
+  return [];
+}
+
+async function sgetPrefixMap(prefix){
+  // prefix = 'report:SLUG:' → lee /reportes/SLUG y devuelve {'report:SLUG:DATE': valor}
+  if(prefix.startsWith('report:')){
+    const slug = prefix.split(':')[1];
+    try{
+      const res = await fetchWithTimeout(FB_URL+'/reportes/'+slug+'.json?_ts='+Date.now(), {}, 15000);
+      if(!res.ok){ console.error('firebase prefix failed', prefix, res.status); return {}; }
+      const data = await res.json();
+      if(!data) return {};
+      const map = {};
+      Object.entries(data).forEach(([date, val])=>{
+        // Normalizar piscinas por si Firebase convirtió el objeto a array
+        if(val && val.piscinas) val.piscinas = normalizePiscinasObj(val.piscinas);
+        map['report:'+slug+':'+date] = val;
+      });
+      return map;
+    }catch(e){ console.error('firebase prefix failed', prefix, e); return {}; }
+  }
+  return {};
+}
+
+async function savePersonalAll(){ return await sset('roster:personal:all', PERSONAL); }
+async function savePiscinasAll(){ return await sset('roster:piscinas:all', PISCINAS); }
+
+/* =============== INIT / SEEDING =============== */
+async function init(){
+  try{
+    await initInner();
+  }catch(e){
+    console.error('init failed', e);
+    document.getElementById('app').innerHTML =
+      '<div class="card"><h2>⚠️ Error al cargar</h2>'+
+      '<p class="sub">Ocurrió un error iniciando la app. Detalle técnico:</p>'+
+      '<p style="color:#f87171;font-family:monospace;font-size:0.75rem;white-space:pre-wrap">'+esc(e && (e.stack||e.message||String(e)))+'</p>'+
+      '<p class="sub">Manda una captura de esto para poder revisarlo.</p></div>';
+  }
+}
+async function initInner(){
+  let camps = await sget('config:camps');
+  if(!camps){
+    camps = DEFAULT_CAMPS;
+    await sset('config:camps', camps);
+  }
+
+  /* Asegura que RECORCHOLIS 2 esté en la lista de campamentos. */
+  if(!camps.find(c=>c.slug==='RECORCHOLIS2')){
+    const idx = camps.findIndex(c=>c.slug==='RECORCHOLIS1');
+    const nuevoCamp = {slug:'RECORCHOLIS2', nombre:'RECORCHOLIS 2'};
+    if(idx>=0) camps.splice(idx+1,0,nuevoCamp); else camps.push(nuevoCamp);
+    const okCamps = await sset('config:camps', camps);
+    if(!okCamps) console.error('No se pudo guardar RECORCHOLIS2 en config:camps, se reintentará en la próxima carga');
+  }
+  CAMPS = camps;
+
+  /* ═══════════════════════════════════════════════════════════════════
+     CARGA DE DATOS — Regla fundamental:
+     Si ya existen datos en Supabase (gestionados por el admin), NUNCA
+     sobrescribirlos. Solo se siembra la primera vez que la base de datos
+     está completamente vacía. Esto evita que recargas de página o accesos
+     simultáneos de múltiples usuarios destruyan los cambios del admin.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  let allPersonal = await sget('roster:personal:all');
+  let allPiscinas = await sget('roster:piscinas:all');
+  const dbReady  = await sget('db:initialized:v1');
+
+  if(!dbReady && !allPersonal && !allPiscinas){
+    /* ── PRIMERA INSTALACIÓN: sembrar y aplicar todas las importaciones ── */
+    console.log('Primera carga: inicializando base de datos...');
+    allPersonal = JSON.parse(JSON.stringify(SEED_PERSONAL));
+    allPiscinas  = JSON.parse(JSON.stringify(SEED_PISCINAS));
+
+    // Aplicar importación de piscinas y asignaciones de operador
+    for(const slug in NEW_PISCINAS_IMPORT){
+      const lst = NEW_PISCINAS_IMPORT[slug];
+      if(!lst.length) continue;
+      allPiscinas[slug] = allPiscinas[slug] || [];
+      const existingIds = new Set(allPiscinas[slug].map(p=>p.id));
+      lst.forEach(p=>{ if(!existingIds.has(p.id)) allPiscinas[slug].push(p); });
+    }
+    for(const slug in PERSON_PISCINAS_IMPORT){
+      const map = PERSON_PISCINAS_IMPORT[slug];
+      const list = allPersonal[slug] || [];
+      for(const personId in map){
+        const p = list.find(p=>p.id===personId);
+        if(p) p.piscinas = map[personId];
+      }
+    }
+    // Agregar campo estado a todo el personal
+    for(const slug in allPersonal)
+      for(const p of allPersonal[slug])
+        if(!p.estado) p.estado = (p.activo===false ? 'Renunció' : 'Trabajando');
+
+    // Agregar sectores a Pantrusko 2
+    (allPiscinas['PANTRUSKO2']||[]).forEach(p=>{
+      const sec = PANTRUSKO2_SECTORS_IMPORT[p.id];
+      if(sec) p.sector = sec;
+    });
+
+    // Guardar todo en Supabase
+    const okP = await sset('roster:personal:all', allPersonal);
+    const okQ = await sset('roster:piscinas:all',  allPiscinas);
+    const tallerConfig = Object.assign({}, TALLER_IMPORT);
+    await sset('config:taller', tallerConfig);
+    TALLER = tallerConfig;
+    if(okP && okQ){
+      await sset('db:initialized:v1', true);
+      console.log('Base de datos inicializada correctamente.');
+    } else {
+      console.error('No se pudo completar la inicialización; se reintentará en la próxima carga.');
+    }
+
+  } else {
+    /* ── CARGA NORMAL: los datos ya existen, solo leer ── */
+    if(!allPersonal) allPersonal = JSON.parse(JSON.stringify(SEED_PERSONAL));
+    if(!allPiscinas)  allPiscinas  = JSON.parse(JSON.stringify(SEED_PISCINAS));
+
+    // Corrección aditiva y no-destructiva: agregar campo "estado" si falta
+    // (nunca elimina ni mueve personal)
+    let estadoChanged = false;
+    for(const slug in allPersonal)
+      for(const p of allPersonal[slug])
+        if(!p.estado){ p.estado = (p.activo===false ? 'Renunció' : 'Trabajando'); estadoChanged = true; }
+    if(estadoChanged) sset('roster:personal:all', allPersonal); // en background, sin bloquear
+
+    // Cargar config de taller
+    TALLER = (await sget('config:taller')) || Object.assign({}, TALLER_IMPORT);
+  }
+
+  PERSONAL = allPersonal;
+  PISCINAS  = allPiscinas;
+
+  // Asegurar que todos los campamentos existan en los objetos (sin guardar en Supabase)
+  for(const c of CAMPS){
+    if(!PISCINAS[c.slug])  PISCINAS[c.slug]  = [];
+    if(!PERSONAL[c.slug])  PERSONAL[c.slug]  = [];
+  }
+
+  if(MODE==='campo'){
+    if(!CAMPS.find(c=>c.slug===URL_CAMPO)){
+      document.getElementById('app').innerHTML = '<div class="card"><h2>⚠️ Enlace inválido</h2><p class="sub">No se encontró el campamento "'+esc(URL_CAMPO)+'". Verifica el enlace con el administrador.</p></div>';
+      document.getElementById('nav-area').innerHTML='';
+      return;
+    }
+    currentCampAdmin = URL_CAMPO;
+  } else {
+    currentCampAdmin = CAMPS[0].slug;
+  }
+  renderNav();
+  render();
+
+  // Auto-refresh silencioso en modo campo: cada 90 segundos actualiza PERSONAL y PISCINAS
+  // sin borrar lo que el operador tenga escrito (actualizarDatos ya hace eso).
+  if(MODE==='campo'){
+    window._campoRefreshTimer = setInterval(async ()=>{
+      // Solo refrescar si no hay un input enfocado (el operador no está escribiendo ahora)
+      const active = document.activeElement;
+      const escribiendo = active && (active.tagName==='INPUT' || active.tagName==='TEXTAREA' || active.tagName==='SELECT');
+      if(escribiendo) return;
+      await actualizarDatosSilencioso();
+    }, 90000);
+  }
+}
+
+// Igual que actualizarDatos pero sin alert/loading — para el auto-refresh en campo.
+// Solo re-renderiza si PERSONAL o PISCINAS realmente cambiaron (evita parpadeos).
+async function actualizarDatosSilencioso(){
+  try{
+    const freshPersonal = await sget('roster:personal:all');
+    const freshPiscinas = await sget('roster:piscinas:all');
+    if(!freshPersonal && !freshPiscinas) return; // sin conexión, no cambiar nada
+
+    // Detectar si algo cambió comparando con los datos actuales en memoria
+    const piscinasStr = JSON.stringify(PISCINAS);
+    const personalStr = JSON.stringify(PERSONAL);
+    const freshPiStr = JSON.stringify(freshPiscinas);
+    const freshPeStr = JSON.stringify(freshPersonal);
+    const cambioDetectado = (freshPiscinas && freshPiStr !== piscinasStr) ||
+                            (freshPersonal && freshPeStr !== personalStr);
+
+    // Actualizar datos en memoria
+    if(freshPersonal){ PERSONAL = freshPersonal; for(const c of CAMPS){ if(!PERSONAL[c.slug]) PERSONAL[c.slug]=[]; } }
+    if(freshPiscinas){ PISCINAS = freshPiscinas; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; } }
+
+    if(cambioDetectado){
+      // Capturar valores actuales del DOM antes de re-renderizar
+      const domPiscinas = {};
+      document.querySelectorAll('#reg-piscinas-body tr[data-ps]').forEach(tr=>{
+        const pid = tr.getAttribute('data-ps');
+        domPiscinas[pid] = {
+          enc: parseInt(tr.querySelector('.ps-enc')?.value||0)||0,
+          apg: parseInt(tr.querySelector('.ps-apg')?.value||0)||0,
+          det: parseInt(tr.querySelector('.ps-det')?.value||0)||0,
+          nov: (tr.querySelector('.ps-nov')?.value||'').trim()
+        };
+      });
+      const domPersonal = {};
+      document.querySelectorAll('#reg-personal-body tr[data-pe]').forEach(tr=>{
+        const pid = tr.getAttribute('data-pe');
+        domPersonal[pid] = {
+          estado: tr.querySelector('.pe-estado')?.value || 'EN CAMPAMENTO',
+          novedad: (tr.querySelector('.pe-nov')?.value||'').trim()
+        };
+      });
+      const hayDatosDOM = Object.keys(domPiscinas).length > 0 || Object.keys(domPersonal).length > 0;
+      if(hayDatosDOM){
+        if(!regDraft) regDraft = {piscinas:{}, personal:{}};
+        Object.assign(regDraft.piscinas, domPiscinas);
+        Object.assign(regDraft.personal, domPersonal);
+      }
+      render(); // solo re-renderiza si hubo cambio real en los datos
+    }
+
+    // Siempre actualizar el indicador de hora
+    const ind = document.getElementById('ultimo-actualizado');
+    if(ind){
+      const d = new Date();
+      ind.textContent = 'Actualizado '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+  }catch(e){ /* silencioso — no alertar al operador */ }
+}
+
+function campName(slug){ const c=CAMPS.find(c=>c.slug===slug); return c?c.nombre:slug; }
+
+/* =============== NAV =============== */
+function renderNav(){
+  const nav = document.getElementById('nav-area');
+  if(MODE==='campo'){
+    nav.innerHTML = '<span class="campo-badge">📍 '+esc(campName(URL_CAMPO))+'</span>'
+      +'<button class="btn small secondary" onclick="actualizarDatos()" id="btn-actualizar" title="Recarga personal y piscinas desde el servidor">🔄 Actualizar datos</button>';
+    return;
+  }
+  const sections = [['dashboard','📊 Resumen'],['registro','📝 Registro'],['config','⚙️ Configuración']];
+  nav.innerHTML = sections.map(([id,label])=>
+    '<button class="nav-btn '+(currentSection===id?'active':'')+'" onclick="setSection(\''+id+'\')">'+label+'</button>'
+  ).join('');
+}
+function setSection(id){ currentSection=id; renderNav(); render(); }
+
+function render(){
+  if(MODE==='campo'){ renderRegistro(URL_CAMPO, true); return; }
+  if(currentSection==='dashboard') renderDashboard();
+  else if(currentSection==='registro') renderRegistroAdmin();
+  else if(currentSection==='config') renderConfig();
+}
+
+/* =============== REGISTRO (ENTRADA DIARIA) =============== */
+let regDate = todayStr();
+let regDraft = null; // {piscinas:{}, personal:{}}
+let regSlug = null;
+
+// Arma el historial de estados de UNA persona a partir de todos los reportes
+// guardados de su campamento (para poder "arrastrar" el último estado conocido
+// hacia adelante, en vez de resetear a "En campamento" cada día).
+function personTimeline(campReportsMap, personId){
+  const entries = [];
+  for(const key in campReportsMap){
+    const parts = key.split(':');
+    const date = parts[2];
+    const rep = campReportsMap[key];
+    if(rep && rep.personal && rep.personal[personId] && rep.personal[personId].estado){
+      entries.push({date, estado: rep.personal[personId].estado});
+    }
+  }
+  entries.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  return entries;
+}
+function estadoOnDate(timeline, date, fallback){
+  let val = fallback;
+  for(const e of timeline){
+    if(e.date <= date) val = e.estado; else break;
+  }
+  return val;
+}
+// Cuenta cuántos días seguidos (terminando en "date") la persona ha estado LIBRE,
+// usando el mismo arrastre. Limitado a 60 días hacia atrás por seguridad.
+function libreStreak(timeline, date, fallback){
+  // Sin ningún historial guardado no sabemos desde cuándo está libre esta
+  // persona (ej. justo después de borrar el historial de prueba) — en ese
+  // caso asumimos que recién quedó libre hoy, en vez de asumir 60 días.
+  if(timeline.length===0) return fallback==='LIBRE' ? 1 : 0;
+  const earliest = timeline[0].date;
+  let count = 0;
+  let d = new Date(date+'T00:00:00');
+  for(let i=0;i<60;i++){
+    const ds = d.toISOString().slice(0,10);
+    const estado = estadoOnDate(timeline, ds, fallback);
+    if(estado!=='LIBRE') break;
+    count++;
+    // No seguimos contando más atrás del primer día del que sí tenemos
+    // registro real — antes de eso no hay forma de saberlo con certeza.
+    if(ds <= earliest) break;
+    d.setDate(d.getDate()-1);
+  }
+  return count;
+}
+
+// Igual que personTimeline/estadoOnDate pero para el conteo de motores
+// DETENIDOS y su novedad, así una avería reportada se sigue mostrando
+// (con su motivo) todos los días hasta que la marquen como reparada.
+function piscinaTimeline(campReportsMap, piscinaId){
+  const entries = [];
+  for(const key in campReportsMap){
+    const parts = key.split(':');
+    const date = parts[2];
+    const rep = campReportsMap[key];
+    if(rep && rep.piscinas && rep.piscinas[piscinaId]){
+      const v = rep.piscinas[piscinaId];
+      entries.push({date, det: v.det||0, nov: v.nov||''});
+    }
+  }
+  entries.sort((a,b)=> a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  return entries;
+}
+function detOnDate(timeline, date){
+  let det = 0, nov = '';
+  for(const e of timeline){
+    if(e.date <= date){ det = e.det; nov = e.nov; } else break;
+  }
+  return {det, nov};
+}
+function detenidoStreak(timeline, date){
+  let count = 0;
+  let d = new Date(date+'T00:00:00');
+  for(let i=0;i<60;i++){
+    const ds = d.toISOString().slice(0,10);
+    const {det} = detOnDate(timeline, ds);
+    if(det>0){ count++; d.setDate(d.getDate()-1); } else break;
+  }
+  return count;
+}
+
+function renderRegistroAdmin(){
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label>Campamento</label>
+          <select id="reg-camp-sel" onchange="onRegCampChange(this.value)">
+            ${CAMPS.map(c=>`<option value="${c.slug}" ${c.slug===currentCampAdmin?'selected':''}>${esc(c.nombre)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="reg-body"></div>
+  `;
+  renderRegistro(currentCampAdmin, false);
+}
+function onRegCampChange(slug){ currentCampAdmin=slug; regDraft=null; renderRegistro(slug,false); }
+
+async function renderRegistro(slug, locked){
+  regSlug = slug;
+  const host = locked ? document.getElementById('app') : document.getElementById('reg-body');
+  host.innerHTML = '<div class="loading">Cargando registro…</div>';
+
+  // PISCINAS y PERSONAL ya están cargados desde init() al abrir la app.
+  // NO se recargan aquí para no borrar el reporte en curso si Supabase
+  // devuelve datos vacíos o el reporte del día aún no se ha guardado.
+  const campReportsMap = await sgetPrefixMap('report:'+slug+':');
+  const key = 'report:'+slug+':'+regDate;
+  let report = campReportsMap[key] || null;
+  // Fallback: si sgetPrefixMap no devolvió nada para esta fecha, buscar directo
+  if(!report){
+    report = await sget(key);
+    if(report && report.piscinas) report.piscinas = normalizePiscinasObj(report.piscinas);
+  }
+  const piscinas = PISCINAS[slug] || [];
+  const personal = (PERSONAL[slug] || []).filter(p=>p.activo!==false);
+
+  const reportLoadedFromFB = !!report; // true = tiene datos reales guardados en Firebase
+  if(!report){
+    // Si hay un borrador en memoria (ej: el usuario asignó piscinas sin guardar
+    // el reporte), usar ese borrador para no perder los datos ya ingresados.
+    if(regDraft && (Object.keys(regDraft.piscinas||{}).length > 0 || Object.keys(regDraft.personal||{}).length > 0)){
+      report = regDraft;
+    } else {
+      report = {piscinas:{}, personal:{}};
+    }
+  } else {
+    for(const p of piscinas){
+      if(report.piscinas[p.id] && report.piscinas[p.id].apg===undefined) report.piscinas[p.id].apg = 0;
+    }
+  }
+  // Los motores DETENIDOS y su novedad se "arrastran" del último reporte
+  // guardado (igual que el estado del personal), en vez de resetear a 0 cada
+  // día — así una falla sigue apareciendo (con su motivo) hasta que la
+  // marquen como resuelta.
+  const piscinaTimelines = {};
+  const detStreaks = {};
+  piscinas.forEach(p=>{
+    const timeline = piscinaTimeline(campReportsMap, p.id);
+    piscinaTimelines[p.id] = timeline;
+    if(!report.piscinas[p.id]){
+      const {det, nov} = detOnDate(timeline, regDate);
+      const detBounded = Math.min(det, p.motores);
+      report.piscinas[p.id] = { enc: Math.max(p.motores - detBounded, 0), apg: 0, det: detBounded, nov };
+    }
+    detStreaks[p.id] = report.piscinas[p.id].det>0 ? detenidoStreak(timeline, regDate) : 0;
+  });
+  // El estado de cada persona se "arrastra" del último día en que cambió,
+  // en vez de resetear a "En campamento" cada vez que se abre una fecha nueva.
+  const timelines = {};
+  const streaks = {};
+  personal.forEach(p=>{
+    const fallback = ESTADO_PERSISTENTE_A_DIARIO[p.estado] || 'EN CAMPAMENTO';
+    const timeline = personTimeline(campReportsMap, p.id);
+    timelines[p.id] = timeline;
+    const estadoHoy = (report.personal[p.id] && report.personal[p.id].estado) || estadoOnDate(timeline, regDate, fallback);
+    report.personal[p.id] = {estado: estadoHoy};
+    streaks[p.id] = estadoHoy==='LIBRE' ? libreStreak(timeline, regDate, fallback) : 0;
+  });
+  regDraft = report;
+
+  let html = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="field">
+          <label>Campamento</label>
+          <div style="font-weight:700;color:#f8fafc;padding-top:5px">${esc(campName(slug))}</div>
+        </div>
+        <div class="field">
+          <label>Fecha del reporte</label>
+          <input type="date" id="reg-date" value="${regDate}">
+          <button class="btn small secondary" style="margin-top:6px" onclick="onRegDateChange(document.getElementById('reg-date').value, '${slug}', ${locked})">Cargar fecha</button>
+          <div style="margin-top:5px;font-size:0.75rem;font-weight:600;${reportLoadedFromFB ? 'color:#34d399' : 'color:#fbbf24'}">
+            ${reportLoadedFromFB ? '✅ Reporte guardado encontrado' : '⚠️ Sin reporte guardado para esta fecha — valores son estimados'}
+          </div>
+        </div>
+      </div>
+      <p class="hint">El estado del personal y los motores "Detenidos" (con su novedad) se mantienen igual día tras día hasta que tú mismo los cambies (a "En campamento" u "Operativo"). Encendidos y Apagados sí se reinician cada día.</p>
+    </div>
+
+    <div class="card">
+      <h2>💧 Piscinas y aireadores — ${piscinas.length} piscinas</h2>
+      <div class="tw"><table><thead><tr>
+        <th>Piscina</th>${slug==='PANTRUSKO2'?'<th>Sector</th>':''}<th>Motores instalados</th><th>Encendidos</th><th>Apagados</th><th>Detenidos</th><th>Cuadre</th><th>Novedad / daño a corregir</th>
+      </tr></thead><tbody id="reg-piscinas-body">
+        ${piscinas.length ? piscinas.map(p=>rowPiscina(p, report.piscinas[p.id], detStreaks[p.id], slug==='PANTRUSKO2', locked)).join('') : '<tr><td colspan="7" class="empty">No hay piscinas registradas. Agrégalas en Configuración.</td></tr>'}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>🔧 Aireadores en taller (reparación mayor)</h2>
+      <p class="sub">Motores que están fuera de las piscinas, en el taller, por una reparación mayor (no es lo mismo que "Detenidos" en una piscina).</p>
+      <div class="row">
+        <input type="number" id="taller-input" min="0" style="width:100px" value="${TALLER[slug]||0}">
+        <button class="btn small" onclick="saveTaller('${slug}')">💾 Guardar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>👷 Personal en campamento — ${personal.length} activos</h2>
+      <div class="tw"><table><thead><tr>
+        <th>Nombre</th><th>Cargo</th><th>Estado del día</th><th>Novedad</th>
+      </tr></thead><tbody id="reg-personal-body">
+        ${personal.length ? personal.map(p=>rowPersonal(p, report.personal[p.id], streaks[p.id])).join('') : '<tr><td colspan="4" class="empty">No hay personal registrado. Agrégalo en Configuración o abajo.</td></tr>'}
+      </tbody></table></div>
+      <div class="inline-form">
+        <div class="field"><label>Nombre nuevo ingreso</label><input type="text" id="np-nombre" placeholder="Nombre completo"></div>
+        <div class="field"><label>Cédula</label><input type="text" id="np-cedula" placeholder="0000000000" class="mini-in" style="width:110px"></div>
+        <div class="field"><label>Cargo</label>
+          <select id="np-cargo"><option>Operador</option><option>Mecánico</option><option>Abastecedor</option><option>Bodeguero</option></select>
+        </div>
+        <button class="btn small" onclick="addPersonalNuevo('${slug}')">+ Agregar personal</button>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn" onclick="saveReport('${slug}')">💾 Guardar reporte del día</button>
+      ${locked ? '<button class="btn secondary" onclick="actualizarDatos()" style="margin-left:8px" title="Recarga personal y piscinas actualizados por el administrador">🔄 Actualizar datos</button><span id="ultimo-actualizado" style="margin-left:8px;font-size:0.75rem;color:#94a3b8;align-self:center"></span>' : ''}
+      <span class="saved-flash" id="reg-saved">✓ Guardado</span>
+    </div>
+  `;
+  host.innerHTML = html;
+}
+
+function rowPiscina(p, val, streak, showSector, locked){
+  const isPC = p.tipo==='PC';
+  const alerta = streak>0 ? `<div class="badge red" style="margin-top:4px" title="Lleva ${streak} día(s) detenido">⚠ Detenido hace ${streak}d — habilitar</div>` : '';
+  return `<tr data-ps="${esc(p.id)}">
+    <td><strong style="color:${isPC?'#a78bfa':'#f8fafc'}">${isPC?'PC ':'PS '}${esc(p.id.replace(/^Pc/,''))}</strong></td>
+    ${showSector?`<td style="font-size:0.75rem;color:#94a3b8">${esc(p.sector||'')}</td>`:''}
+    <td><span class="mini-in ps-mot" style="display:inline-block;min-width:50px;text-align:center;cursor:default" title="Motores instalados — solo editable en Configuración → Piscinas">${p.motores}</span></td>
+    <td><input type="number" class="mini-in ps-enc" min="0" value="${val.enc}" oninput="onCuadreInput('${esc(p.id)}')"></td>
+    <td><input type="number" class="mini-in ps-apg" min="0" value="${val.apg||0}" oninput="onCuadreInput('${esc(p.id)}')"></td>
+    <td><input type="number" class="mini-in ps-det" min="0" value="${val.det}" oninput="onCuadreInput('${esc(p.id)}')">${alerta}</td>
+    <td><span class="ps-cuadre" id="cuadre-${esc(p.id)}">${cuadreHtml((val.enc||0)+(val.apg||0)+(val.det||0), p.motores)}</span></td>
+    <td><input type="text" class="nov-in ps-nov" placeholder="ej: 1 caja reductora, sembrada, seca..." value="${esc(val.nov)}"></td>
+  </tr>`;
+}
+async function saveTaller(slug){
+  const v = Math.max(0, parseInt(document.getElementById('taller-input').value||0));
+  TALLER[slug] = v;
+  const ok = await sset('config:taller', TALLER);
+  if(ok) alert('Guardado: '+v+' aireadores en taller para '+campName(slug));
+  else alert('No se pudo guardar, intenta de nuevo.');
+}
+function cuadreHtml(suma, motores){
+  if(suma===motores) return '<span class="badge ok">✓ '+suma+'/'+motores+'</span>';
+  return '<span class="badge red">⚠ '+suma+'/'+motores+'</span>';
+}
+function onCuadreInput(id){
+  const tr = document.querySelector('#reg-piscinas-body tr[data-ps="'+CSS.escape(id)+'"]');
+  if(!tr) return;
+  const enc = parseInt(tr.querySelector('.ps-enc').value||0);
+  const apg = parseInt(tr.querySelector('.ps-apg').value||0);
+  const det = parseInt(tr.querySelector('.ps-det').value||0);
+  const motEl = tr.querySelector('.ps-mot');
+  const motores = parseInt(motEl.value !== undefined ? motEl.value : motEl.textContent || 0);
+  document.getElementById('cuadre-'+id).innerHTML = cuadreHtml(enc+apg+det, motores);
+}
+async function onMotoresChange(input, id){
+  let v = parseInt(input.value||0); if(v<0) v=0; input.value=v;
+  const p = (PISCINAS[regSlug]||[]).find(p=>p.id===id);
+  if(p){
+    const anterior = p.motores;
+    if(v === anterior){ onCuadreInput(id); return; }
+    const confirmado = confirm(
+      '⚙️ CAMBIO DE MOTORES — Piscina ' + id + '\n\n' +
+      'Valor anterior: ' + anterior + ' motores\n' +
+      'Valor nuevo:    ' + v + ' motores\n\n' +
+      '¿Confirmas este cambio?\n' +
+      '(Este dato afecta el cálculo de cuadre para TODOS los reportes de ' + regSlug + ')'
+    );
+    if(!confirmado){
+      input.value = anterior;
+      return;
+    }
+    p.motores = v;
+    const ok = await savePiscinasAll();
+    if(!ok){
+      p.motores = anterior;
+      input.value = anterior;
+      alert('❌ No se pudo guardar el cambio de motores. Verifica tu conexión e intenta de nuevo.');
+      return;
+    }
+    console.log('✅ Motores piscina '+id+' cambiado: '+anterior+' → '+v+' ('+regSlug+')');
+  }
+  onCuadreInput(id);
+}
+function rowPersonal(p, val, streak){
+  let contador = '';
+  if(val.estado==='LIBRE' && streak>0){
+    const cls = streak>=8 ? 'red' : 'gray';
+    const icono = streak>=8 ? '⚠ ' : '';
+    contador = `<span class="badge ${cls}" style="margin-left:6px" title="Lleva ${streak} día(s) seguidos libre (máximo permitido: 8)">${icono}${streak}d libre</span>`;
+  }
+  const piscinasIds = p.piscinas || [];
+  const nombreCell = `${esc(p.nombre)}<br><button type="button" onclick="togglePiscinasPersona('${esc(p.id)}')" style="font-size:0.7rem;color:#60a5fa;background:none;border:none;cursor:pointer;padding:0;text-decoration:underline">${piscinasIds.length} piscinas ▾</button>`;
+  return `<tr data-pe="${esc(p.id)}">
+    <td>${nombreCell}</td>
+    <td><span class="pill">${esc(p.cargo)}</span></td>
+    <td><select class="pe-estado" onchange="this.closest('tr').querySelector('.badge-cell')?.remove()">
+      ${ESTADOS.map(e=>`<option value="${e}" ${val.estado===e?'selected':''}>${e}</option>`).join('')}
+    </select>${contador}</td>
+    <td><input type="text" class="nov-in pe-nov" placeholder="opcional" value="${esc(p.novedad||'')}"></td>
+  </tr>
+  <tr id="piscinas-det-${esc(p.id)}" style="display:none"><td colspan="4">${renderPiscinasCheckboxes(PISCINAS[regSlug]||[], piscinasIds, p.id, 'saveRegistroPiscinas')}</td></tr>`;
+}
+async function saveRegistroPiscinas(personId){
+  // ── PASO 1: capturar los valores del DOM ANTES de re-renderizar ──────────
+  // Esto evita que los datos ingresados (enc/apg/det) se pierdan cuando
+  // renderRegistro lee el reporte de Supabase y obtiene null (aún no guardado).
+  const domPiscinas = {};
+  document.querySelectorAll('#reg-piscinas-body tr[data-ps]').forEach(tr=>{
+    const pid = tr.getAttribute('data-ps');
+    domPiscinas[pid] = {
+      enc: parseInt(tr.querySelector('.ps-enc')?.value||0)||0,
+      apg: parseInt(tr.querySelector('.ps-apg')?.value||0)||0,
+      det: parseInt(tr.querySelector('.ps-det')?.value||0)||0,
+      nov: (tr.querySelector('.ps-nov')?.value||'').trim()
+    };
+  });
+  const domPersonal = {};
+  document.querySelectorAll('#reg-personal-body tr[data-pe]').forEach(tr=>{
+    const pid = tr.getAttribute('data-pe');
+    domPersonal[pid] = {
+      estado: tr.querySelector('.pe-estado')?.value || 'EN CAMPAMENTO',
+      novedad: (tr.querySelector('.pe-nov')?.value||'').trim()
+    };
+  });
+  // Mezclar en regDraft para que renderRegistro los use si Supabase devuelve null
+  if(!regDraft) regDraft = {piscinas:{}, personal:{}};
+  Object.assign(regDraft.piscinas, domPiscinas);
+  Object.assign(regDraft.personal, domPersonal);
+
+  // ── PASO 2: guardar la asignación de piscinas ────────────────────────────
+  const ids = Array.from(document.querySelectorAll('.pisc-chk-'+personId+':checked')).map(c=>c.value);
+  const p = (PERSONAL[regSlug]||[]).find(p=>p.id===personId);
+  if(!p) return;
+  p.piscinas = ids;
+  const ok = await savePersonalAll();
+  if(ok){
+    renderRegistro(regSlug, MODE==='campo');
+  } else {
+    alert('No se pudo guardar, intenta de nuevo.');
+  }
+}
+function togglePiscinasPersona(id){
+  const row = document.getElementById('piscinas-det-'+id);
+  if(row) row.style.display = row.style.display==='none' ? 'table-row' : 'none';
+}
+
+
+function onRegDateChange(v, slug, locked){ regDate = v; regDraft = null; renderRegistro(slug, locked); }
+
+async function actualizarDatos(){
+  const btn = document.getElementById('btn-actualizar');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Actualizando…'; }
+  try{
+    // Capturar valores actuales del DOM antes de re-renderizar, para no perder lo escrito
+    const domPiscinas = {};
+    document.querySelectorAll('#reg-piscinas-body tr[data-ps]').forEach(tr=>{
+      const pid = tr.getAttribute('data-ps');
+      domPiscinas[pid] = {
+        enc: parseInt(tr.querySelector('.ps-enc')?.value||0)||0,
+        apg: parseInt(tr.querySelector('.ps-apg')?.value||0)||0,
+        det: parseInt(tr.querySelector('.ps-det')?.value||0)||0,
+        nov: (tr.querySelector('.ps-nov')?.value||'').trim()
+      };
+    });
+    const domPersonal = {};
+    document.querySelectorAll('#reg-personal-body tr[data-pe]').forEach(tr=>{
+      const pid = tr.getAttribute('data-pe');
+      domPersonal[pid] = {
+        estado: tr.querySelector('.pe-estado')?.value || 'EN CAMPAMENTO',
+        novedad: (tr.querySelector('.pe-nov')?.value||'').trim()
+      };
+    });
+    const hayDatosDOM = Object.keys(domPiscinas).length > 0 || Object.keys(domPersonal).length > 0;
+
+    const freshPersonal = await sget('roster:personal:all');
+    const freshPiscinas = await sget('roster:piscinas:all');
+    if(freshPersonal){
+      PERSONAL = freshPersonal;
+      for(const c of CAMPS){ if(!PERSONAL[c.slug]) PERSONAL[c.slug]=[]; }
+    }
+    if(freshPiscinas){
+      PISCINAS = freshPiscinas;
+      for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+    }
+    // Preservar lo que el operador tenía escrito si no había guardado
+    if(hayDatosDOM){
+      if(!regDraft) regDraft = {piscinas:{}, personal:{}};
+      Object.assign(regDraft.piscinas, domPiscinas);
+      Object.assign(regDraft.personal, domPersonal);
+    } else {
+      regDraft = null;
+    }
+    render();
+    const ind = document.getElementById('ultimo-actualizado');
+    if(ind){
+      const d = new Date();
+      ind.textContent = 'Actualizado '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    }
+  } catch(e){
+    alert('No se pudo actualizar: '+e);
+  } finally{
+    const b2 = document.getElementById('btn-actualizar');
+    if(b2){ b2.disabled=false; b2.textContent='🔄 Actualizar datos'; }
+  }
+}
+
+async function addPersonalNuevo(slug){
+  const nombre = document.getElementById('np-nombre').value.trim();
+  const cedula = document.getElementById('np-cedula').value.trim();
+  const cargo = document.getElementById('np-cargo').value;
+  if(!nombre){ alert('Escribe el nombre del nuevo ingreso'); return; }
+  const list = PERSONAL[slug] || [];
+  const id = 'p' + Date.now();
+  list.push({id, nombre, cedula, cargo, fechaIngreso: regDate, activo:true, novedad:'INGRESA'});
+  PERSONAL[slug] = list;
+  await savePersonalAll();
+  renderRegistro(slug, MODE==='campo');
+}
+
+async function saveReport(slug){
+  const piscinas = {};
+  const descuadradas = [];
+  const sinNovedad = [];
+  document.querySelectorAll('#reg-piscinas-body tr[data-ps]').forEach(tr=>{
+    const id = tr.getAttribute('data-ps');
+    const enc = parseInt(tr.querySelector('.ps-enc').value||0);
+    const apg = parseInt(tr.querySelector('.ps-apg').value||0);
+    const det = parseInt(tr.querySelector('.ps-det').value||0);
+    const motEl = tr.querySelector('.ps-mot');
+    const motores = parseInt(motEl.value !== undefined ? motEl.value : motEl.textContent || 0);
+    const nov = tr.querySelector('.ps-nov').value.trim();
+    piscinas[id] = {enc, apg, det, nov};
+    if(enc+apg+det !== motores) descuadradas.push(id.replace(/^Pc/,'PC ')+' ('+(enc+apg+det)+'/'+motores+')');
+    if(det>0 && !nov) sinNovedad.push(id.replace(/^Pc/,'PC '));
+  });
+  if(sinNovedad.length){
+    alert('Estas piscinas tienen motores DETENIDOS pero les falta escribir la falla en "Novedad / daño a corregir":\n\n'+sinNovedad.join('\n')+'\n\nEscribe la falla antes de guardar.');
+    return;
+  }
+  if(descuadradas.length){
+    const seguir = confirm('Estas piscinas no cuadran (encendidos + apagados + detenidos ≠ motores instalados):\n\n'+descuadradas.join('\n')+'\n\n¿Guardar de todas formas?');
+    if(!seguir) return;
+  }
+  const personal = {};
+  const list = PERSONAL[slug] || [];
+  let personalChanged = false;
+  document.querySelectorAll('#reg-personal-body tr[data-pe]').forEach(tr=>{
+    const id = tr.getAttribute('data-pe');
+    const estado = tr.querySelector('.pe-estado').value;
+    const nov = tr.querySelector('.pe-nov').value.trim();
+    personal[id] = {estado, nov};
+    const p = list.find(p=>p.id===id);
+    if(p){
+      const nuevoEstadoPersistente = ESTADO_DIARIO_A_PERSISTENTE[estado] || 'Trabajando';
+      if(p.estado !== nuevoEstadoPersistente){ p.estado = nuevoEstadoPersistente; personalChanged = true; }
+      if(p.novedad !== nov){ p.novedad = nov; personalChanged = true; }
+      const nuevoActivo = estado !== 'RENUNCIA';
+      if(p.activo !== nuevoActivo){ p.activo = nuevoActivo; personalChanged = true; }
+    }
+  });
+  const report = {piscinas, personal, savedAt: new Date().toISOString()};
+  const key = 'report:'+slug+':'+regDate;
+  const saved = await sset(key, report);
+  if(!saved){
+    const detalle = window._lastSsetError ? '\n\n🔍 Detalle técnico:\n' + window._lastSsetError : '';
+    alert('⚠️ Error al guardar el reporte. Verifica tu conexión e intenta de nuevo.' + detalle);
+    return;
+  }
+  // Actualizar regDraft con los valores recién guardados.
+  // Esto evita que un renderRegistro posterior (ej: al actualizar piscinas o auto-refresh)
+  // use valores viejos del borrador si Firebase aún no ha propagado el nuevo reporte.
+  regDraft = {piscinas, personal, savedAt: report.savedAt};
+  if(personalChanged) await savePersonalAll();
+  const flash = document.getElementById('reg-saved');
+  if(flash){
+    flash.textContent = '✓ Guardado — ' + fmtDate(regDate);
+    flash.classList.add('show');
+    setTimeout(()=>flash.classList.remove('show'), 2800);
+  }
+  // Verificación post-guardado: leer de Firebase 3s después para confirmar
+  // que los datos de piscinas quedaron almacenados correctamente.
+  const _savedPiscinas = Object.assign({}, piscinas);
+  const _savedKey = key;
+  const _savedSlug = slug;
+  setTimeout(async ()=>{
+    try{
+      const check = await sget(_savedKey);
+      if(!check){ console.error('⚠️ Verificación: reporte no encontrado en Firebase:', _savedKey); return; }
+      const fbPiscinas = normalizePiscinasObj(check.piscinas || {});
+      const mismatches = [];
+      for(const id in _savedPiscinas){
+        const sv = _savedPiscinas[id];
+        const fb = fbPiscinas[id];
+        if(!fb){
+          mismatches.push('Piscina '+id+': datos NO encontrados en Firebase (enc='+sv.enc+', det='+sv.det+')');
+        } else if(fb.enc !== sv.enc || fb.det !== sv.det || fb.apg !== sv.apg){
+          mismatches.push('Piscina '+id+': guardado enc='+sv.enc+'/det='+sv.det+' pero Firebase tiene enc='+fb.enc+'/det='+fb.det);
+        }
+      }
+      if(mismatches.length){
+        console.error('⚠️ Verificación post-guardado FALLA para '+_savedSlug+' '+_savedKey+'\n'+mismatches.join('\n'));
+        alert('⚠️ ADVERTENCIA: se detectaron diferencias entre lo guardado y lo almacenado en Firebase:\n\n'+mismatches.slice(0,5).join('\n')+'\n\nCaptura esta pantalla y envíala al administrador. Intenta guardar de nuevo.');
+      } else {
+        console.log('✅ Verificación post-guardado OK para '+_savedSlug+' ('+regDate+'): '+Object.keys(_savedPiscinas).length+' piscinas correctas');
+      }
+    }catch(e){ console.error('Error en verificación post-guardado:', e); }
+  }, 3000);
+}
+
+
+/* =============== DASHBOARD =============== */
+let dashDate = todayStr();
+let dashCampFilter = 'ALL';
+
+async function fetchReports(date, slugs){
+  const out = {};
+  for(const slug of slugs){
+    const campMap = await sgetPrefixMap('report:'+slug+':');
+    let own = campMap['report:'+slug+':'+date] || null;
+    // Fallback: si sgetPrefixMap no devolvió nada para esta fecha, buscar directo
+    if(!own){
+      own = await sget('report:'+slug+':'+date);
+      if(own && own.piscinas) own.piscinas = normalizePiscinasObj(own.piscinas);
+    }
+    const personal = (PERSONAL[slug]||[]).filter(p=>p.activo!==false);
+    const personalOut = {};
+    personal.forEach(p=>{
+      const fallback = ESTADO_PERSISTENTE_A_DIARIO[p.estado] || 'EN CAMPAMENTO';
+      const timeline = personTimeline(campMap, p.id);
+      const estado = (own && own.personal && own.personal[p.id] && own.personal[p.id].estado) || estadoOnDate(timeline, date, fallback);
+      const nov = (own && own.personal && own.personal[p.id] && own.personal[p.id].nov) || p.novedad || '';
+      personalOut[p.id] = {estado, nov};
+    });
+    const piscinasOut = {};
+    (PISCINAS[slug]||[]).forEach(p=>{
+      if(own && own.piscinas && own.piscinas[p.id]){
+        piscinasOut[p.id] = own.piscinas[p.id];
+      } else {
+        const timeline = piscinaTimeline(campMap, p.id);
+        const {det, nov} = detOnDate(timeline, date);
+        const detBounded = Math.min(det, p.motores);
+        piscinasOut[p.id] = { enc: Math.max(p.motores-detBounded,0), apg:0, det: detBounded, nov };
+      }
+    });
+    out[slug] = { piscinas: piscinasOut, personal: personalOut, hasOwnReport: !!own };
+  }
+  return out;
+}
+
+async function renderDashboard(){
+  const app = document.getElementById('app');
+  app.innerHTML = '<div class="loading">Cargando resumen…</div>';
+
+  const slugs = CAMPS.map(c=>c.slug);
+  const reports = await fetchReports(dashDate, slugs);
+
+  const DIESEL_GAL_H = 0.275;   // galones por aireador por hora
+  const DIESEL_HORAS  = 10;      // horas de operación nocturna por defecto
+  const SLUG_ELECTRICO = 'RECORCHOLIS2'; // aireadores eléctricos — excluir del diesel
+
+  let tMotores=0, tEnc=0, tDet=0, tPiscinas=0, tHa=0;
+  let tEnCampo=0, tLibre=0, tPermiso=0, tVac=0, tRenuncia=0, tFalta=0;
+  let tEncDiesel=0; // encendidos acumulados solo en campamentos con diesel (no eléctricos)
+  let novedades = [];
+  let personalHoy = [];
+  let campRows = [];
+  let mecanicosTotal=0, operadoresTotal=0;
+
+  const filterSlugs = dashCampFilter==='ALL' ? slugs : [dashCampFilter];
+
+  filterSlugs.forEach(slug=>{
+    const rep = reports[slug];
+    const piscinas = PISCINAS[slug] || [];
+    const personal = (PERSONAL[slug]||[]).filter(p=>p.activo!==false);
+    let cMotores=0, cEnc=0, cDet=0, cHa=0;
+    piscinas.forEach(p=>{
+      cMotores += p.motores; if(p.ha) cHa += p.ha;
+      const v = rep && rep.piscinas ? rep.piscinas[p.id] : null;
+      const enc = v ? v.enc : p.motores;
+      const det = v ? v.det : 0;
+      cEnc += enc; cDet += det;
+      if(v && v.nov) novedades.push({camp:slug, ps:p.id, tipo:p.tipo, nov:v.nov});
+    });
+    let cEnCampo=0,cLibre=0,cPermiso=0,cVac=0,cRenuncia=0,cFalta=0;
+    personal.forEach(p=>{
+      const v = rep && rep.personal ? rep.personal[p.id] : null;
+      const estado = v ? v.estado : 'EN CAMPAMENTO';
+      if(estado==='EN CAMPAMENTO') cEnCampo++;
+      else if(estado==='LIBRE') cLibre++;
+      else if(estado==='PERMISO MEDICO') cPermiso++;
+      else if(estado==='VACACIONES') cVac++;
+      else if(estado==='RENUNCIA') cRenuncia++;
+      else if(estado==='FALTA INJUSTIFICADA') cFalta++;
+      if(p.cargo==='Mecánico') mecanicosTotal++; else operadoresTotal++;
+      personalHoy.push({camp:slug, nombre:p.nombre, cargo:p.cargo, estado, nov: v?v.nov:''});
+    });
+    tMotores+=cMotores; tEnc+=cEnc; tDet+=cDet; tPiscinas+=piscinas.length; tHa+=cHa;
+    tEnCampo+=cEnCampo; tLibre+=cLibre; tPermiso+=cPermiso; tVac+=cVac; tRenuncia+=cRenuncia; tFalta+=cFalta;
+    const esDiesel = slug !== SLUG_ELECTRICO;
+    if(esDiesel) tEncDiesel += cEnc;
+    const dieselNoche = esDiesel ? (cEnc * DIESEL_GAL_H * DIESEL_HORAS) : 0;
+    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche});
+  });
+
+  const pctOp = tMotores ? (tEnc/tMotores*100).toFixed(1) : '0.0';
+  const psPorOperador = operadoresTotal ? (tPiscinas/operadoresTotal).toFixed(1) : '-';
+  const motPorMec = mecanicosTotal ? (tMotores/mecanicosTotal).toFixed(1) : '-';
+  const dieselDiario  = tEncDiesel * DIESEL_GAL_H * DIESEL_HORAS;
+  const dieselSemanal = dieselDiario * 7;
+
+  let html = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div class="row" style="margin-bottom:0">
+          <div class="field"><label>Fecha</label><input type="date" id="dash-date" value="${dashDate}" onchange="onDashDateChange(this.value)"></div>
+          <div class="field"><label>Campamento</label>
+            <select id="dash-camp" onchange="onDashCampChange(this.value)">
+              <option value="ALL" ${dashCampFilter==='ALL'?'selected':''}>Todos los campamentos</option>
+              ${CAMPS.map(c=>`<option value="${c.slug}" ${dashCampFilter===c.slug?'selected':''}>${esc(c.nombre)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn" onclick="renderDashboard()" title="Recargar datos del resumen">🔄 Actualizar</button>
+          <button class="btn secondary" onclick="showLinksPanel()">🔗 Enlaces por campamento</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="lbl">Aireadores encendidos</div><div class="val green">${tEnc}</div></div>
+      <div class="stat"><div class="lbl">Aireadores detenidos</div><div class="val yellow">${tDet}</div></div>
+      <div class="stat"><div class="lbl">% Operativo</div><div class="val ${pctOp>=90?'green':pctOp>=75?'yellow':'red'}">${pctOp}%</div></div>
+      <div class="stat"><div class="lbl">Piscinas</div><div class="val gray">${tPiscinas}</div></div>
+      <div class="stat"><div class="lbl">Hectáreas</div><div class="val gray">${tHa.toFixed(1)}</div></div>
+      <div class="stat"><div class="lbl">Piscinas / operador</div><div class="val blue">${psPorOperador}</div></div>
+      <div class="stat"><div class="lbl">Motores / mecánico</div><div class="val purple">${motPorMec}</div></div>
+      <div class="stat"><div class="lbl">En campamento</div><div class="val green">${tEnCampo}</div></div>
+      <div class="stat"><div class="lbl">Libres</div><div class="val yellow">${tLibre}</div></div>
+      <div class="stat"><div class="lbl">Permiso médico</div><div class="val yellow">${tPermiso}</div></div>
+      <div class="stat"><div class="lbl">Vacaciones</div><div class="val blue">${tVac}</div></div>
+      <div class="stat"><div class="lbl">Renuncias (histórico)</div><div class="val red">${tRenuncia}</div></div>
+    </div>
+
+    <div class="card" style="border:1px solid #854d0e;background:linear-gradient(135deg,#1c1007 0%,#0f172a 100%)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:1.3rem">⛽</span>
+          <h2 style="margin:0;color:#fbbf24">Estimado de diesel (${DIESEL_HORAS}h · ${DIESEL_GAL_H} gal/motor/h)</h2>
+        </div>
+        <button class="btn" style="background:#854d0e;border-color:#ca8a04;color:#fbbf24" onclick="showDieselReport()">📊 Reporte de consumo</button>
+      </div>
+      <p style="font-size:0.75rem;color:#78716c;margin:0 0 14px">Excluye ${campName(SLUG_ELECTRICO)} (eléctrico). Entregas: <strong style="color:#fbbf24">lunes y jueves</strong> · semana completa = 7 noches (Lun 3 + Jue 4). Basado en aireadores encendidos del último reporte.</p>
+
+      <!-- Desglose por campamento -->
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table style="width:100%;border-collapse:collapse;font-size:0.82rem">
+          <thead>
+            <tr style="color:#a16207;font-size:0.7rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #292524">
+              <th style="text-align:left;padding:4px 8px">Campamento</th>
+              <th style="text-align:right;padding:4px 8px">Airead. enc.</th>
+              <th style="text-align:right;padding:4px 8px">Por noche</th>
+              <th style="text-align:right;padding:4px 8px">📅 Lunes<br><span style="color:#57534e;font-size:0.65rem;font-weight:400">(3 noches)</span></th>
+              <th style="text-align:right;padding:4px 8px">📅 Jueves<br><span style="color:#57534e;font-size:0.65rem;font-weight:400">(4 noches)</span></th>
+              <th style="text-align:right;padding:4px 8px">Semana<br><span style="color:#57534e;font-size:0.65rem;font-weight:400">(7 noches)</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            ${campRows.filter(r=>r.esDiesel).map(r=>`
+              <tr style="border-bottom:1px solid #1c1917">
+                <td style="padding:5px 8px;color:#e2e8f0;font-weight:600">${esc(campName(r.slug))}</td>
+                <td style="padding:5px 8px;text-align:right;color:#94a3b8">${r.enc}</td>
+                <td style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:600">${r.dieselNoche.toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*3.785).toFixed(0)}L</span></td>
+                <td style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*3).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*3*3.785).toFixed(0)}L</span></td>
+                <td style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*4).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*4*3.785).toFixed(0)}L</span></td>
+                <td style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:700">${(r.dieselNoche*7).toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*7*3.785).toFixed(0)}L</span></td>
+              </tr>`).join('')}
+            <!-- Fila TOTAL -->
+            <tr style="border-top:2px solid #ca8a04;font-weight:700">
+              <td style="padding:6px 8px;color:#fbbf24">TOTAL</td>
+              <td style="padding:6px 8px;text-align:right;color:#94a3b8">${tEncDiesel}</td>
+              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${dieselDiario.toFixed(0)} gal / ${(dieselDiario*3.785).toFixed(0)}L</td>
+              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal / ${(dieselDiario*3*3.785).toFixed(0)}L</td>
+              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal / ${(dieselDiario*4*3.785).toFixed(0)}L</td>
+              <td style="padding:6px 8px;text-align:right;color:#fbbf24;font-size:1rem">${(dieselDiario*7).toFixed(0)} gal / ${(dieselDiario*7*3.785).toFixed(0)}L</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Cards resumen -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
+        <div style="background:#0f1a0a;border:1px solid #854d0e;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#78716c;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Por noche (${tEncDiesel} airead.)</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${dieselDiario.toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3.785).toFixed(0)} litros</div>
+        </div>
+        <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del LUNES · 3 noches</div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Cubre: lun · mar · mié</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3*3.785).toFixed(0)} litros</div>
+        </div>
+        <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del JUEVES · 4 noches</div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Cubre: jue · vie · sáb · dom</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*4*3.785).toFixed(0)} litros</div>
+        </div>
+        <div style="background:#0f1a0a;border:2px solid #16a34a;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#16a34a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📦 SEMANA COMPLETA · 7 noches</div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Lun ${(dieselDiario*3).toFixed(0)} + Jue ${(dieselDiario*4).toFixed(0)}</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#4ade80">${(dieselDiario*7).toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#16a34a">${(dieselDiario*7*3.785).toFixed(0)} litros</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>🏭 Por campamento</h2>
+      <div class="tw"><table><thead><tr>
+        <th>Campamento</th><th>Reportó hoy</th><th>Piscinas</th><th>Motores</th><th>Encendidos</th><th>Detenidos</th><th>Taller</th><th>% Op.</th><th>⛽ Diesel/noche</th><th>Personal</th><th>En campo</th><th>Libre</th><th>Permiso méd.</th>
+      </tr></thead><tbody>
+        ${campRows.map(r=>{
+          const p = r.motores? (r.enc/r.motores*100).toFixed(1) : '0.0';
+          const dCell = r.esDiesel
+            ? `<td style="color:#fbbf24;font-weight:600">${r.dieselNoche.toFixed(0)} gal<span style="color:#78716c;font-weight:400;font-size:0.72rem"> / ${(r.dieselNoche*3.785).toFixed(0)}L</span></td>`
+            : `<td style="color:#64748b;font-size:0.75rem">⚡ eléctrico</td>`;
+          return `<tr>
+            <td><strong>${esc(campName(r.slug))}</strong></td>
+            <td>${r.hasReport?'<span class="badge ok">✓ sí</span>':'<span class="badge gray">sin datos</span>'}</td>
+            <td>${r.piscinas}</td><td>${r.motores}</td>
+            <td><span class="badge ok">${r.enc}</span></td>
+            <td>${r.det>0?'<span class="badge warn">'+r.det+'</span>':'0'}</td>
+            <td>${(TALLER[r.slug]||0)>0?'<span class="badge red">'+(TALLER[r.slug]||0)+'</span>':'0'}</td>
+            <td>${p}%</td>${dCell}<td>${r.personal}</td><td>${r.enCampo}</td><td>${r.libre}</td><td>${r.permiso}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>⚠️ Novedades del día (${novedades.length})</h2>
+      <div class="tw"><table><thead><tr><th>Campamento</th><th>Piscina</th><th>Novedad</th></tr></thead><tbody>
+        ${novedades.length? novedades.map(n=>`<tr><td>${esc(campName(n.camp))}</td><td>${n.tipo==='PC'?'PC ':'PS '}${esc(n.ps.replace(/^Pc/,''))}</td><td>${esc(n.nov)}</td></tr>`).join('') : '<tr><td colspan="3" class="empty">Sin novedades registradas</td></tr>'}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>👷 Personal del día</h2>
+      <div class="tw"><table><thead><tr><th>Campamento</th><th>Nombre</th><th>Cargo</th><th>Estado</th><th>Novedad</th></tr></thead><tbody>
+        ${personalHoy.map(p=>{
+          const cls = p.estado==='EN CAMPAMENTO'?'ok':p.estado==='RENUNCIA'?'red':p.estado==='LIBRE'?'warn':'warn';
+          return `<tr><td>${esc(campName(p.camp))}</td><td>${esc(p.nombre)}</td><td>${esc(p.cargo)}</td><td><span class="badge ${cls}">${p.estado}</span></td><td>${esc(p.nov)}</td></tr>`;
+        }).join('')}
+      </tbody></table></div>
+    </div>
+
+    <div class="card">
+      <h2>📋 Ficha de asistencia para RRHH</h2>
+      <p class="sub">Genera el Excel con el mismo formato quincenal (una fila por persona, una columna por día, L / VAC / PM / RENUNCIA).</p>
+      <div class="row">
+        <div class="field"><label>Desde</label><input type="date" id="exp-start" value="${dashDate}"></div>
+        <div class="field"><label>Hasta</label><input type="date" id="exp-end" value="${dashDate}"></div>
+        <div class="field"><label>Campamento</label>
+          <select id="exp-camp">
+            <option value="ALL">Todos</option>
+            ${CAMPS.map(c=>`<option value="${c.slug}">${esc(c.nombre)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn" id="exp-btn" onclick="exportAsistencia()" style="margin-top:18px">⬇️ Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚙️ Reporte de eficiencia por piscina</h2>
+      <p class="sub">Piscina, hectáreas, motores instalados, encendidos, apagados, detenidos, con sumas y % de operatividad — para un día puntual.</p>
+      <div class="row">
+        <div class="field"><label>Fecha</label><input type="date" id="efi-date" value="${dashDate}"></div>
+        <div class="field"><label>Campamento</label>
+          <select id="efi-camp">
+            <option value="ALL">Todos</option>
+            ${CAMPS.map(c=>`<option value="${c.slug}">${esc(c.nombre)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="btn" id="efi-btn" onclick="exportEficiencia()" style="margin-top:18px">⬇️ Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div id="diesel-report-panel"></div>
+    <div id="links-panel"></div>
+  `;
+  app.innerHTML = html;
+
+  // Auto-actualizar el Dashboard cada 5 minutos mientras esté visible
+  clearTimeout(window._dashRefreshTimer);
+  window._dashRefreshTimer = setTimeout(function autoRefresh(){
+    if(currentSection === 'dashboard' && MODE === 'admin'){
+      renderDashboard();
+    }
+  }, 5 * 60 * 1000);
+}
+
+function onDashDateChange(v){ dashDate=v; renderDashboard(); }
+function onDashCampChange(v){ dashCampFilter=v; renderDashboard(); }
+
+function baseUrl(){
+  return location.origin + location.pathname;
+}
+/* ── REPORTE DE CONSUMO DE DIESEL ───────────────────────── */
+function showDieselReport(){
+  const panel = document.getElementById('diesel-report-panel');
+  if(!panel) return;
+  const today = todayStr();
+  panel.innerHTML = `
+    <div class="card" style="border:1px solid #854d0e">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <h2 style="margin:0">📊 Reporte de consumo de diesel</h2>
+        <button class="btn small secondary" onclick="document.getElementById('diesel-report-panel').innerHTML=''">✕ Cerrar</button>
+      </div>
+      <div class="row" style="flex-wrap:wrap;gap:10px;margin-bottom:12px">
+        <div class="field" style="margin:0">
+          <label>Tipo de reporte</label>
+          <select id="dr-tipo" onchange="drTipoChange()">
+            <option value="diario">Diario</option>
+            <option value="semanal" selected>Semanal</option>
+            <option value="mensual">Mensual</option>
+          </select>
+        </div>
+        <div class="field" id="dr-fecha-field" style="margin:0">
+          <label>Semana que incluye la fecha</label>
+          <input type="date" id="dr-fecha" value="${today}">
+        </div>
+        <div class="field" id="dr-mes-field" style="margin:0;display:none">
+          <label>Mes</label>
+          <input type="month" id="dr-mes" value="${today.slice(0,7)}">
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button class="btn" onclick="generarDieselReport()" id="dr-btn">⚡ Generar</button>
+        </div>
+      </div>
+      <div id="dr-resultado"></div>
+    </div>`;
+  panel.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function drTipoChange(){
+  const t = document.getElementById('dr-tipo').value;
+  document.getElementById('dr-fecha-field').style.display = (t==='mensual') ? 'none' : '';
+  document.getElementById('dr-mes-field').style.display  = (t==='mensual') ? '' : 'none';
+  const lbl = document.getElementById('dr-fecha-field').querySelector('label');
+  if(lbl) lbl.textContent = (t==='diario') ? 'Fecha' : 'Semana que incluye la fecha';
+}
+
+async function generarDieselReport(){
+  const tipo  = document.getElementById('dr-tipo').value;
+  const res   = document.getElementById('dr-resultado');
+  const btn   = document.getElementById('dr-btn');
+  btn.disabled = true; btn.textContent = '⏳ Cargando...';
+  res.innerHTML = '';
+
+  // Construir lista de fechas
+  let dates = [];
+  if(tipo === 'diario'){
+    const f = document.getElementById('dr-fecha').value;
+    if(!f){ alert('Selecciona una fecha'); btn.disabled=false; btn.textContent='⚡ Generar'; return; }
+    dates = [f];
+  } else if(tipo === 'semanal'){
+    const f = document.getElementById('dr-fecha').value;
+    if(!f){ alert('Selecciona una fecha'); btn.disabled=false; btn.textContent='⚡ Generar'; return; }
+    // Semana lun-dom que contiene la fecha
+    const d = new Date(f+'T12:00:00');
+    const dow = d.getDay(); // 0=dom,1=lun,...
+    const lun = new Date(d); lun.setDate(d.getDate() - ((dow+6)%7));
+    for(let i=0;i<7;i++){
+      const dd = new Date(lun); dd.setDate(lun.getDate()+i);
+      dates.push(dd.toISOString().slice(0,10));
+    }
+  } else {
+    const m = document.getElementById('dr-mes').value;
+    if(!m){ alert('Selecciona un mes'); btn.disabled=false; btn.textContent='⚡ Generar'; return; }
+    const [yr,mo] = m.split('-').map(Number);
+    const dias = new Date(yr, mo, 0).getDate();
+    for(let i=1;i<=dias;i++) dates.push(`${yr}-${String(mo).padStart(2,'0')}-${String(i).padStart(2,'0')}`);
+  }
+
+  // Campamentos diesel
+  const dieselCamps = CAMPS.filter(c=>c.slug !== SLUG_ELECTRICO);
+  const DIESEL_GAL_H = 0.275, DIESEL_HORAS = 10;
+
+  // Cargar reportes: para cada camp y cada fecha
+  const allData = {}; // allData[slug][date] = encendidos
+  await Promise.all(dieselCamps.map(async camp=>{
+    allData[camp.slug] = {};
+    await Promise.all(dates.map(async dt=>{
+      const rep = await sget('report:'+camp.slug+':'+dt);
+      const piscinas = PISCINAS[camp.slug] || [];
+      let enc = 0;
+      piscinas.forEach(p=>{
+        const v = rep && rep.piscinas ? rep.piscinas[p.id] : null;
+        enc += v ? v.enc : p.motores; // si no hay reporte, asume todos enc
+      });
+      allData[camp.slug][dt] = enc;
+    }));
+  }));
+
+  // Calcular totales por día y por camp
+  const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const fmtD = d => { const o=new Date(d+'T12:00:00'); return dias[o.getDay()]+' '+d.slice(5).replace('-','/'); };
+
+  // Totales por campamento (suma de noches)
+  const campTotals = {}; // campTotals[slug] = {gal: X}
+  dieselCamps.forEach(c=>{ campTotals[c.slug]={gal:0}; });
+  dates.forEach(dt=>{
+    dieselCamps.forEach(c=>{
+      const enc = allData[c.slug][dt]||0;
+      campTotals[c.slug].gal += enc * DIESEL_GAL_H * DIESEL_HORAS;
+    });
+  });
+
+  // Construir tabla
+  const noches = dates.length;
+  let html = `<div style="overflow-x:auto">
+    <table style="width:100%;border-collapse:collapse;font-size:0.8rem">
+      <thead>
+        <tr style="color:#a16207;font-size:0.68rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #292524">
+          <th style="text-align:left;padding:4px 8px">Fecha</th>
+          ${dieselCamps.map(c=>`<th style="text-align:right;padding:4px 8px">${esc(campName(c.slug))}<br><span style="font-size:0.6rem;color:#57534e">gal / litros</span></th>`).join('')}
+          <th style="text-align:right;padding:4px 8px;color:#fbbf24">TOTAL NOCHE</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+  let grandTotal = 0;
+  dates.forEach(dt=>{
+    let rowTotal = 0;
+    const cells = dieselCamps.map(c=>{
+      const enc = allData[c.slug][dt]||0;
+      const gal = enc * DIESEL_GAL_H * DIESEL_HORAS;
+      rowTotal += gal;
+      return `<td style="text-align:right;padding:4px 8px;color:#e2e8f0">${gal.toFixed(0)}<span style="color:#78716c"> / ${(gal*3.785).toFixed(0)}L</span></td>`;
+    }).join('');
+    grandTotal += rowTotal;
+    const esLun = new Date(dt+'T12:00:00').getDay()===1;
+    const esJue = new Date(dt+'T12:00:00').getDay()===4;
+    const rowStyle = (esLun||esJue) ? 'background:#1c1a0a;' : '';
+    const tag = esLun ? ' <span style="color:#ca8a04;font-size:0.65rem">📅LUN</span>' : esJue ? ' <span style="color:#ca8a04;font-size:0.65rem">📅JUE</span>' : '';
+    html += `<tr style="border-bottom:1px solid #1c1917;${rowStyle}">
+      <td style="padding:4px 8px;color:#94a3b8">${fmtD(dt)}${tag}</td>
+      ${cells}
+      <td style="text-align:right;padding:4px 8px;color:#fbbf24;font-weight:700">${rowTotal.toFixed(0)} gal</td>
+    </tr>`;
+  });
+
+  // Fila totales
+  html += `<tr style="border-top:2px solid #ca8a04;font-weight:700;background:#1c1007">
+    <td style="padding:6px 8px;color:#fbbf24">TOTAL (${noches} noches)</td>
+    ${dieselCamps.map(c=>`<td style="text-align:right;padding:6px 8px;color:#fbbf24">${campTotals[c.slug].gal.toFixed(0)} gal<span style="color:#a16207;font-weight:400"> / ${(campTotals[c.slug].gal*3.785).toFixed(0)}L</span></td>`).join('')}
+    <td style="text-align:right;padding:6px 8px;color:#4ade80;font-size:1rem">${grandTotal.toFixed(0)} gal / ${(grandTotal*3.785).toFixed(0)}L</td>
+  </tr>`;
+  html += `</tbody></table></div>`;
+
+  // Resumen ejecutivo
+  const promedioNoche = grandTotal / noches;
+  html += `<div style="margin-top:12px;padding:12px;background:#0f1a0a;border-radius:8px;font-size:0.82rem;color:#a16207">
+    <strong style="color:#fbbf24">Resumen:</strong>
+    Promedio por noche: <strong style="color:#fbbf24">${promedioNoche.toFixed(0)} gal</strong> |
+    Total del período: <strong style="color:#4ade80">${grandTotal.toFixed(0)} gal / ${(grandTotal*3.785).toFixed(0)} litros</strong>
+    ${noches===7 ? ` | Proyectado mes (30d): <strong style="color:#94a3b8">${(promedioNoche*30).toFixed(0)} gal</strong>` : ''}
+  </div>
+  <p style="font-size:0.7rem;color:#57534e;margin-top:8px">⚠ Días sin reporte guardado: el sistema asume todos los aireadores encendidos (estimado conservador).</p>`;
+
+  res.innerHTML = html;
+  btn.disabled = false; btn.textContent = '⚡ Generar';
+}
+/* ─────────────────────────────────────────────────────────── */
+
+function showLinksPanel(){
+  const panel = document.getElementById('links-panel');
+  panel.innerHTML = `
+    <div class="card">
+      <h2>🔗 Enlace por campamento</h2>
+      <p class="sub">Comparte cada enlace con el responsable de ese campamento para que llene su reporte diario directamente.</p>
+      ${CAMPS.map(c=>{
+        const url = baseUrl() + '?campo=' + c.slug;
+        return `<div class="link-row"><strong style="min-width:150px">${esc(c.nombre)}</strong><code>${esc(url)}</code><button class="btn small secondary" onclick="copyLink('${esc(url)}')">Copiar</button></div>`;
+      }).join('')}
+    </div>`;
+}
+function copyLink(url){
+  navigator.clipboard.writeText(url).then(()=>alert('Enlace copiado')).catch(()=>prompt('Copia el enlace:', url));
+}
+
+async function collectRangeDates(start, end){
+  const dates=[]; let d=new Date(start+'T00:00:00'); const e=new Date(end+'T00:00:00');
+  while(d<=e){ dates.push(d.toISOString().slice(0,10)); d.setDate(d.getDate()+1); }
+  return dates;
+}
+
+async function exportAsistencia(){
+  const btn = document.getElementById('exp-btn');
+  try{
+    const start = document.getElementById('exp-start').value;
+    const end = document.getElementById('exp-end').value;
+    const campSel = document.getElementById('exp-camp').value;
+    if(!start || !end || start>end){ alert('Revisa el rango de fechas'); return; }
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+
+    if(typeof ExcelJS === 'undefined') throw new Error('La librería ExcelJS no cargó (revisa tu conexión a internet).');
+
+    const dates = await collectRangeDates(start, end);
+    const slugs = campSel==='ALL' ? CAMPS.map(c=>c.slug) : [campSel];
+
+    // Una sola petición por campamento (trae todos sus reportes de una vez),
+    // en vez de una petición por cada combinación de campamento y día.
+    const reportsBySlug = {};
+    for(const slug of slugs){
+      reportsBySlug[slug] = await sgetPrefixMap('report:'+slug+':');
+    }
+
+    // Colores de fondo por estado del día
+    const FILLS = {
+      'EN CAMPAMENTO': 'FFB7E1CD', // verde agua
+      'LIBRE': 'FFFF0000',         // rojo
+      'PERMISO MEDICO': 'FFFFEB3B',// amarillo
+      'RENUNCIA': 'FFFFFFFF'       // blanco
+    };
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Asistencia');
+    const header = ['CAMPAMENTO','NOMBRES','#CEDULA','FECHA INGRESO','CARGO','NOVEDADES', ...dates.map(fmtDate)];
+    const headerRow = ws.addRow(header);
+    headerRow.font = { bold: true };
+
+    let dataRows = 0;
+    const THIN = { style: 'thin', color: {argb:'FF000000'} };
+    const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
+    header.forEach((_,i)=>{ headerRow.getCell(i+1).border = BORDER_ALL; });
+
+    slugs.forEach(slug=>{
+      const personal = PERSONAL[slug] || [];
+      const campReports = reportsBySlug[slug] || {};
+      personal.forEach(p=>{
+        const fallback = p.activo===false ? 'RENUNCIA' : (ESTADO_PERSISTENTE_A_DIARIO[p.estado] || 'EN CAMPAMENTO');
+        const timeline = personTimeline(campReports, p.id);
+        const estados = dates.map(date => estadoOnDate(timeline, date, fallback));
+        const rowValues = [campName(slug), p.nombre, p.cedula||'', p.fechaIngreso?fmtDate(p.fechaIngreso):'', p.cargo, p.novedad||'',
+          ...estados.map(estado => ESTADO_CODE[estado] !== undefined ? ESTADO_CODE[estado] : '')];
+        const row = ws.addRow(rowValues);
+        rowValues.forEach((_,i)=>{ row.getCell(i+1).border = BORDER_ALL; });
+        estados.forEach((estado, i)=>{
+          const cell = row.getCell(7 + i); // A-F son fijas (1-6), las fechas empiezan en la 7
+          const argb = FILLS[estado];
+          if(argb){
+            cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb} };
+          }
+        });
+        dataRows++;
+      });
+    });
+
+    if(dataRows===0){ alert('No hay personal para exportar con esos filtros.'); return; }
+
+    ws.columns.forEach((c,i)=>{ c.width = i<6 ? 20 : 8; });
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Asistencia_Aireadores_' + start + '_a_' + end + '.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  }catch(e){
+    console.error('export failed', e);
+    alert('No se pudo generar el Excel.\n\nDetalle: ' + (e && (e.message||String(e))));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '⬇️ Exportar a Excel'; }
+  }
+}
+
+async function exportEficiencia(){
+  const btn = document.getElementById('efi-btn');
+  try{
+    const date = document.getElementById('efi-date').value;
+    const campSel = document.getElementById('efi-camp').value;
+    if(!date){ alert('Elige una fecha'); return; }
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Generando...'; }
+    if(typeof ExcelJS === 'undefined') throw new Error('La librería ExcelJS no cargó (revisa tu conexión a internet).');
+
+    const slugs = campSel==='ALL' ? CAMPS.map(c=>c.slug) : [campSel];
+    const reports = await fetchReports(date, slugs); // reutiliza el mismo arrastre de detenidos que el resto de la app
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet('Eficiencia');
+    const header = ['CAMPAMENTO','PISCINA','OPERADOR','TIPO','HECTÁREAS','MOTORES INSTALADOS','ENCENDIDOS','APAGADOS','DETENIDOS','% OPERATIVIDAD'];
+    const headerRow = ws.addRow(header);
+    headerRow.font = { bold: true };
+    const THIN = { style: 'thin', color: {argb:'FF000000'} };
+    const BORDER_ALL = { top: THIN, left: THIN, bottom: THIN, right: THIN };
+    header.forEach((_,i)=>{ headerRow.getCell(i+1).border = BORDER_ALL; });
+
+    // Mapa inverso: slug → { piscinaId → nombre del operador asignado }
+    const piscinaOperador = {};
+    for(const slug of slugs){
+      piscinaOperador[slug] = {};
+      for(const p of (PERSONAL[slug] || [])){
+        for(const pid of (p.piscinas || [])){
+          piscinaOperador[slug][pid] = p.nombre;
+        }
+      }
+    }
+
+    let gMot=0, gEnc=0, gApg=0, gDet=0, gHa=0, dataRows=0;
+
+    slugs.forEach(slug=>{
+      const piscinas = PISCINAS[slug] || [];
+      const rep = reports[slug] || {piscinas:{}};
+      let cMot=0, cEnc=0, cApg=0, cDet=0, cHa=0;
+      piscinas.forEach(p=>{
+        const v = rep.piscinas[p.id] || {enc:p.motores, apg:0, det:0};
+        const pct = p.motores ? (v.enc/p.motores*100) : 0;
+        const label = (p.tipo==='PC'?'PC ':'PS ')+p.id.replace(/^Pc/,'');
+        const operador = (piscinaOperador[slug]&&piscinaOperador[slug][p.id]) || '';
+        const row = ws.addRow([campName(slug), label, operador, p.tipo, p.ha||0, p.motores, v.enc, v.apg||0, v.det, pct/100]);
+        row.getCell(10).numFmt = '0.0%';
+        for(let i=1;i<=10;i++) row.getCell(i).border = BORDER_ALL;
+        cMot+=p.motores; cEnc+=v.enc; cApg+=v.apg||0; cDet+=v.det; cHa+=p.ha||0;
+        dataRows++;
+      });
+      if(piscinas.length){
+        const pct = cMot ? (cEnc/cMot*100) : 0;
+        const totalRow = ws.addRow([campName(slug)+' — TOTAL', '', '', '', cHa, cMot, cEnc, cApg, cDet, pct/100]);
+        totalRow.font = { bold: true };
+        totalRow.getCell(10).numFmt = '0.0%';
+        for(let i=1;i<=10;i++) totalRow.getCell(i).border = BORDER_ALL;
+        gMot+=cMot; gEnc+=cEnc; gApg+=cApg; gDet+=cDet; gHa+=cHa;
+      }
+    });
+
+    if(dataRows===0){ alert('No hay piscinas para exportar con esos filtros.'); return; }
+
+    if(slugs.length>1){
+      const pct = gMot ? (gEnc/gMot*100) : 0;
+      const grandRow = ws.addRow(['TOTAL GENERAL', '', '', '', gHa, gMot, gEnc, gApg, gDet, pct/100]);
+      grandRow.font = { bold: true };
+      grandRow.getCell(10).numFmt = '0.0%';
+      grandRow.fill = { type:'pattern', pattern:'solid', fgColor:{argb:'FFE2E8F0'} };
+      for(let i=1;i<=10;i++) grandRow.getCell(i).border = BORDER_ALL;
+    }
+
+    // Anchos: CAMPAMENTO=18, PISCINA=10, OPERADOR=28, TIPO=7, resto=12
+    ws.columns.forEach((c,i)=>{ c.width = i===0?18:i===1?10:i===2?28:i===3?7:12; });
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Eficiencia_Aireadores_' + date + '.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  }catch(e){
+    console.error('export eficiencia failed', e);
+    alert('No se pudo generar el Excel.\n\nDetalle: ' + (e && (e.message||String(e))));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '⬇️ Exportar a Excel'; }
+  }
+}
+
+
+let configTab = 'camps';
+let configCampSel = null;
+
+function renderConfig(){
+  if(!configCampSel) configCampSel = CAMPS[0]?.slug;
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="tabs2">
+      <button class="tab2 ${configTab==='camps'?'active':''}" onclick="setConfigTab('camps')">🏭 Campamentos</button>
+      <button class="tab2 ${configTab==='piscinas'?'active':''}" onclick="setConfigTab('piscinas')">💧 Piscinas</button>
+      <button class="tab2 ${configTab==='personal'?'active':''}" onclick="setConfigTab('personal')">👷 Personal</button>
+      <button class="tab2 ${configTab==='mant'?'active':''}" onclick="setConfigTab('mant')">🧹 Mantenimiento</button>
+    </div>
+    <div id="config-body"></div>
+  `;
+  if(configTab==='camps') renderConfigCamps();
+  else if(configTab==='piscinas') renderConfigPiscinas();
+  else if(configTab==='personal') renderConfigPersonal();
+  else renderConfigMant();
+}
+function setConfigTab(t){ configTab=t; renderConfig(); }
+
+function renderConfigMant(){
+  const body = document.getElementById('config-body');
+  body.innerHTML = `
+    <div class="card">
+      <h2>🔍 Ver / borrar el reporte de una fecha específica</h2>
+      <p class="sub">Revisa exactamente qué quedó guardado para un campamento y una fecha puntual, y bórralo si está mal.</p>
+      <div class="row">
+        <div class="field"><label>Campamento</label>${campSelectorHtml('mant-camp','onMantCampChange')}</div>
+        <div class="field"><label>Fecha</label><input type="date" id="mant-date" value="${todayStr()}"></div>
+        <button class="btn small secondary" style="margin-top:18px" onclick="verReporteEspecifico()">👁️ Ver</button>
+        <button class="btn small danger" style="margin-top:18px" onclick="borrarReporteEspecifico()">🗑️ Borrar este reporte</button>
+      </div>
+      <pre id="mant-view" style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:10px;font-size:0.72rem;color:#94a3b8;white-space:pre-wrap;margin-top:10px;display:none"></pre>
+    </div>
+
+    <div class="card">
+      <h2>🧹 Borrar TODO el historial de reportes diarios</h2>
+      <p class="sub">Esto borra TODOS los reportes diarios guardados hasta ahora (piscinas y estado del personal, de todas las fechas y todos los campamentos) — sirve para eliminar datos de prueba viejos que puedan estar interfiriendo con el estado actual (ej. alguien que quedó "Libre" y no se refleja bien en ciertas fechas).</p>
+      <p class="sub"><strong>NO borra</strong> el personal, las piscinas configuradas, ni el estado/novedad actual de cada persona — solo el historial día por día.</p>
+      <button class="btn danger" id="mant-btn" onclick="limpiarHistorialReportes()">🗑️ Borrar todo el historial de reportes</button>
+      <p class="sub" id="mant-status"></p>
+    </div>`;
+}
+let mantCampSel = null;
+function onMantCampChange(v){ mantCampSel = v; }
+async function verReporteEspecifico(){
+  const slug = mantCampSel || configCampSel || CAMPS[0]?.slug;
+  const date = document.getElementById('mant-date').value;
+  const pre = document.getElementById('mant-view');
+  pre.style.display = 'block';
+  pre.textContent = 'Buscando...';
+  const val = await sget('report:'+slug+':'+date);
+  if(!val){ pre.textContent = 'No hay ningún reporte guardado para '+campName(slug)+' el '+fmtDate(date)+'.'; return; }
+  // Traduce los IDs de personal a nombres para que sea legible
+  const personal = PERSONAL[slug]||[];
+  const legible = { piscinas: val.piscinas, personal: {} };
+  for(const id in (val.personal||{})){
+    const p = personal.find(p=>p.id===id);
+    legible.personal[(p?p.nombre:id)] = val.personal[id];
+  }
+  pre.textContent = 'report:'+slug+':'+date+'\n\n'+JSON.stringify(legible, null, 2);
+}
+async function borrarReporteEspecifico(){
+  const slug = mantCampSel || configCampSel || CAMPS[0]?.slug;
+  const date = document.getElementById('mant-date').value;
+  if(!confirm('¿Borrar el reporte de '+campName(slug)+' del '+fmtDate(date)+'? Esta acción no se puede deshacer.')) return;
+  // PUT null → Firebase elimina el nodo completamente (no deja registro vacío)
+  const ok = await sset('report:'+slug+':'+date, null);
+  const pre = document.getElementById('mant-view');
+  pre.style.display = 'block';
+  pre.textContent = ok ? '✅ Reporte borrado correctamente.\n\nAl abrir esa fecha en el Registro el operador verá "⚠️ Sin reporte guardado" y podrá ingresar los datos nuevamente.' : '❌ No se pudo borrar, intenta de nuevo.';
+}
+async function limpiarHistorialReportes(){
+  if(!confirm('¿Seguro que quieres borrar TODO el historial de reportes diarios de TODOS los campamentos? Esta acción no se puede deshacer.')) return;
+  const btn = document.getElementById('mant-btn');
+  const status = document.getElementById('mant-status');
+  try{
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Borrando...'; }
+    const keys = await slist('report:');
+    let ok = 0, fail = 0;
+    for(const k of keys){
+      const r = await sset(k, {piscinas:{}, personal:{}});
+      if(r) ok++; else fail++;
+      if(status) status.textContent = `Progreso: ${ok+fail}/${keys.length}`;
+    }
+    if(status) status.textContent = `Listo. ${ok} reportes limpiados${fail?', '+fail+' fallaron (reintenta si es necesario)':''} de ${keys.length} encontrados.`;
+  }catch(e){
+    console.error('limpiarHistorialReportes failed', e);
+    alert('No se pudo completar la limpieza.\n\nDetalle: '+(e && (e.message||String(e))));
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = '🗑️ Borrar todo el historial de reportes'; }
+  }
+}
+
+function renderConfigCamps(){
+  const body = document.getElementById('config-body');
+  body.innerHTML = `
+    <div class="card">
+      <h2>🏭 Campamentos registrados (${CAMPS.length})</h2>
+      <div class="tw"><table><thead><tr><th>Nombre</th><th>Identificador (slug)</th><th>Piscinas</th><th>Personal activo</th></tr></thead><tbody>
+        ${CAMPS.map(c=>`<tr>
+          <td><strong>${esc(c.nombre)}</strong></td>
+          <td><code>${esc(c.slug)}</code></td>
+          <td>${(PISCINAS[c.slug]||[]).length}</td>
+          <td>${(PERSONAL[c.slug]||[]).filter(p=>p.activo!==false).length}</td>
+        </tr>`).join('')}
+      </tbody></table></div>
+      <div class="inline-form">
+        <div class="field"><label>Nombre del nuevo campamento</label><input type="text" id="nc-nombre" placeholder="ej: CAMARONERA 11"></div>
+        <button class="btn small" onclick="addCamp()">+ Agregar campamento</button>
+      </div>
+      <p class="hint">Al agregar un campamento se genera su enlace propio en la pestaña Resumen → "Enlaces por campamento". Luego agrega sus piscinas y personal aquí.</p>
+    </div>`;
+}
+async function addCamp(){
+  const nombre = document.getElementById('nc-nombre').value.trim();
+  if(!nombre){ alert('Escribe el nombre del campamento'); return; }
+  let slug = nombre.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!slug) slug = 'CAMPO'+(CAMPS.length+1);
+  if(CAMPS.find(c=>c.slug===slug)) slug = slug + (CAMPS.length+1);
+  CAMPS.push({slug, nombre});
+  PISCINAS[slug] = [];
+  PERSONAL[slug] = [];
+  await sset('config:camps', CAMPS);
+  await savePiscinasAll();
+  await savePersonalAll();
+  configCampSel = slug;
+  renderConfigCamps();
+}
+
+function campSelectorHtml(id, onchange){
+  return `<select id="${id}" onchange="${onchange}(this.value)">
+    ${CAMPS.map(c=>`<option value="${c.slug}" ${c.slug===configCampSel?'selected':''}>${esc(c.nombre)}</option>`).join('')}
+  </select>`;
+}
+
+function renderConfigPiscinas(){
+  const body = document.getElementById('config-body');
+  const list = PISCINAS[configCampSel] || [];
+  body.innerHTML = `
+    <div class="card">
+      <div class="row"><div class="field"><label>Campamento</label>${campSelectorHtml('cfg-ps-camp','onConfigPsCampChange')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0">💧 Piscinas de ${esc(campName(configCampSel))} (${list.length})</h2>
+        <button class="btn small secondary" id="btn-leer-fb" onclick="leerPiscinasFB()" title="Recarga desde Firebase y muestra motores actuales de piscina 7 y Pc7">🔍 Leer Firebase</button>
+      </div>
+      <div class="tw"><table><thead><tr><th>ID</th><th>Tipo</th><th>Motores</th><th>Hectáreas</th><th></th></tr></thead><tbody id="ps-table-body">
+        ${list.map((p,i)=>`<tr data-i="${i}">
+          <td><input type="text" class="mini-in" style="width:70px" value="${esc(p.id)}" id="ps-id-${i}"></td>
+          <td><select id="ps-tipo-${i}"><option value="PS" ${p.tipo==='PS'?'selected':''}>PS</option><option value="PC" ${p.tipo==='PC'?'selected':''}>PC</option></select></td>
+          <td><input type="number" class="mini-in" value="${p.motores}" id="ps-mot-${i}"></td>
+          <td><input type="number" step="0.01" class="mini-in" style="width:80px" value="${p.ha!=null?p.ha:''}" id="ps-ha-${i}"></td>
+          <td><button class="btn small" onclick="savePiscinaRow(${i})">💾</button> <button class="btn small danger" onclick="deletePiscinaRow(${i})">✕</button> <span id="ps-status-${i}" style="color:#34d399;font-size:0.8rem;opacity:0;transition:opacity .3s"></span></td>
+        </tr>`).join('')}
+      </tbody></table></div>
+      <div class="inline-form">
+        <div class="field"><label>ID piscina</label><input type="text" id="np-ps-id" placeholder="ej: 41 o Pc41" style="width:100px"></div>
+        <div class="field"><label>Tipo</label><select id="np-ps-tipo"><option value="PS">PS</option><option value="PC">PC</option></select></div>
+        <div class="field"><label>Motores</label><input type="number" id="np-ps-mot" value="10" style="width:80px"></div>
+        <div class="field"><label>Hectáreas</label><input type="number" step="0.01" id="np-ps-ha" style="width:90px"></div>
+        <button class="btn small" onclick="addPiscinaRow()">+ Agregar piscina</button>
+      </div>
+    </div>`;
+}
+function onConfigPsCampChange(v){ configCampSel=v; renderConfigPiscinas(); }
+async function savePiscinaRow(i){
+  const list = PISCINAS[configCampSel];
+  const id = document.getElementById('ps-id-'+i).value.trim();
+  const tipo = document.getElementById('ps-tipo-'+i).value;
+  const motores = parseInt(document.getElementById('ps-mot-'+i).value||0);
+  const haRaw = document.getElementById('ps-ha-'+i).value;
+  const ha = haRaw==='' ? null : parseFloat(haRaw);
+  // Preservar campos extra (ej: sector en PANTRUSKO2)
+  list[i] = Object.assign({}, list[i], {id, tipo, motores, ha});
+  const status = document.getElementById('ps-status-'+i);
+  if(status){ status.textContent='⏳'; status.style.color='#facc15'; status.style.opacity='1'; }
+  const ok = await savePiscinasAll();
+  if(!ok){
+    if(status){ status.textContent='❌'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },3000); }
+    alert('❌ No se pudo guardar en Firebase. Revisa tu conexión e intenta de nuevo.');
+    const fresh = await sget('roster:piscinas:all');
+    if(fresh){ PISCINAS = fresh; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; } }
+    renderConfigPiscinas();
+    return;
+  }
+  // Verificación post-guardado: releer de Firebase y confirmar que el valor quedó correcto
+  await new Promise(r=>setTimeout(r,1500));
+  const fbData = await sget('roster:piscinas:all');
+  if(fbData){
+    const fbList = fbData[configCampSel] || [];
+    const fbP = Array.isArray(fbList)
+      ? fbList.find(p=>p && p.id===id)
+      : Object.values(fbList).find(p=>p && p.id===id);
+    if(!fbP){
+      if(status){ status.textContent='⚠'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },5000); }
+      alert('⚠️ ADVERTENCIA: Firebase no encuentra la piscina "'+id+'" en '+configCampSel+' después de guardar. Contacta al administrador.');
+      return;
+    }
+    if(fbP.motores !== motores){
+      if(status){ status.textContent='⚠'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },5000); }
+      alert('⚠️ ADVERTENCIA: Se guardó motores='+motores+' pero Firebase tiene motores='+fbP.motores+' para piscina "'+id+'" en '+configCampSel+'.\n\nEl guardado no persistió correctamente. Intenta de nuevo.');
+      // Recargar datos reales de Firebase
+      PISCINAS = fbData; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+      renderConfigPiscinas();
+      return;
+    }
+    // Actualizar PISCINAS en memoria con lo que realmente tiene Firebase
+    PISCINAS = fbData; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+  }
+  if(status){ status.textContent='✓ '+motores+' motores'; status.style.color='#34d399'; setTimeout(()=>{ status.style.opacity='0'; },3000); }
+}
+async function leerPiscinasFB(){
+  const btn = document.getElementById('btn-leer-fb');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Leyendo...'; }
+  const fbData = await sget('roster:piscinas:all');
+  if(btn){ btn.disabled=false; btn.textContent='🔍 Leer Firebase'; }
+  if(!fbData){ alert('❌ No se pudo leer Firebase. Verifica tu conexión.'); return; }
+  PISCINAS = fbData;
+  for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+  renderConfigPiscinas();
+  const list = PISCINAS[configCampSel] || [];
+  const ps7 = Array.isArray(list)
+    ? list.find(p=>p && p.id==='7')
+    : Object.values(list).find(p=>p && p.id==='7');
+  const pc7 = Array.isArray(list)
+    ? list.find(p=>p && p.id==='Pc7')
+    : Object.values(list).find(p=>p && p.id==='Pc7');
+  let msg = '✅ Datos recargados desde Firebase para '+campName(configCampSel)+'.\n\n';
+  if(ps7) msg += 'PS 7  → motores: '+ps7.motores+'\n';
+  if(pc7) msg += 'Pc7   → motores: '+pc7.motores+'\n';
+  if(!ps7 && !pc7) msg += '(Sin piscinas 7 o Pc7 en este campamento)';
+  alert(msg);
+}
+async function deletePiscinaRow(i){
+  if(!confirm('¿Eliminar esta piscina del registro?')) return;
+  const list = PISCINAS[configCampSel];
+  list.splice(i,1);
+  await savePiscinasAll();
+  renderConfigPiscinas();
+}
+async function addPiscinaRow(){
+  const id = document.getElementById('np-ps-id').value.trim();
+  const tipo = document.getElementById('np-ps-tipo').value;
+  const motores = parseInt(document.getElementById('np-ps-mot').value||0);
+  const haRaw = document.getElementById('np-ps-ha').value;
+  const ha = haRaw==='' ? null : parseFloat(haRaw);
+  if(!id){ alert('Escribe el identificador de la piscina'); return; }
+  const list = PISCINAS[configCampSel] || [];
+  list.push({id, tipo, motores, ha});
+  PISCINAS[configCampSel] = list;
+  await savePiscinasAll();
+  renderConfigPiscinas();
+}
+
+function renderConfigPersonal(){
+  const body = document.getElementById('config-body');
+  const list = PERSONAL[configCampSel] || [];
+  const ESTADOS = ['Trabajando','Libre','Permiso médico','Vacaciones','Renunció'];
+  const piscinasCamp = PISCINAS[configCampSel] || [];
+  body.innerHTML = `
+    <div class="card">
+      <div class="row"><div class="field"><label>Campamento</label>${campSelectorHtml('cfg-pe-camp','onConfigPeCampChange')}</div></div>
+      <h2>👷 Personal de ${esc(campName(configCampSel))} (${list.filter(p=>p.activo!==false).length} activos de ${list.length})</h2>
+      <div class="tw"><table><thead><tr><th>Nombre</th><th>Cédula</th><th>Cargo</th><th>Fecha ingreso</th><th>Estado</th><th>Novedad</th><th>Piscinas</th><th></th></tr></thead><tbody>
+        ${list.map((p,i)=>`<tr data-i="${i}">
+          <td><input type="text" class="nov-in" style="width:180px" value="${esc(p.nombre)}" id="pe-nom-${i}"></td>
+          <td><input type="text" class="mini-in" style="width:110px" value="${esc(p.cedula||'')}" id="pe-ced-${i}"></td>
+          <td><select id="pe-cargo-${i}"><option ${p.cargo==='Operador'?'selected':''}>Operador</option><option ${p.cargo==='Mecánico'?'selected':''}>Mecánico</option><option ${p.cargo==='Abastecedor'?'selected':''}>Abastecedor</option><option ${p.cargo==='Bodeguero'?'selected':''}>Bodeguero</option></select></td>
+          <td><input type="date" id="pe-fi-${i}" value="${p.fechaIngreso||''}"></td>
+          <td><select id="pe-estado-${i}">${ESTADOS.map(e=>`<option ${((p.estado||(p.activo===false?'Renunció':'Trabajando'))===e)?'selected':''}>${e}</option>`).join('')}</select></td>
+          <td><input type="text" class="nov-in" style="width:160px" value="${esc(p.novedad||'')}" id="pe-nov-${i}"></td>
+          <td><button class="btn small secondary" onclick="togglePiscinasConfig(${i})">${(p.piscinas||[]).length} 🖊️</button></td>
+          <td><button class="btn small" onclick="savePersonalRow(${i})">💾</button> <button class="btn small danger" onclick="deletePersonalRow(${i})">✕</button></td>
+        </tr>
+        <tr id="piscinas-cfg-${i}" style="display:none"><td colspan="8">${renderPiscinasCheckboxes(piscinasCamp, p.piscinas||[], i)}</td></tr>`).join('')}
+      </tbody></table></div>
+      <div class="inline-form">
+        <div class="field"><label>Nombre</label><input type="text" id="np-pe-nombre" style="width:200px"></div>
+        <div class="field"><label>Cédula</label><input type="text" id="np-pe-cedula" style="width:130px"></div>
+        <div class="field"><label>Cargo</label><select id="np-pe-cargo"><option>Operador</option><option>Mecánico</option><option>Abastecedor</option><option>Bodeguero</option></select></div>
+        <div class="field"><label>Fecha ingreso</label><input type="date" id="np-pe-fi" value="${todayStr()}"></div>
+        <button class="btn small" onclick="addPersonalRow()">+ Agregar personal</button>
+      </div>
+    </div>`;
+}
+function renderPiscinasCheckboxes(piscinasCamp, assignedIds, key, saveFn){
+  saveFn = saveFn || 'saveConfigPiscinas';
+  const groups = {};
+  piscinasCamp.forEach(p=>{
+    const g = p.sector || '__nogroup__';
+    groups[g] = groups[g] || [];
+    groups[g].push(p);
+  });
+  const groupKeys = Object.keys(groups);
+  const body = groupKeys.map(g=>{
+    const items = groups[g].map(p=>{
+      const label = (p.tipo==='PC'?'PC ':'PS ')+p.id.replace(/^Pc/,'');
+      const checked = assignedIds.includes(p.id) ? 'checked' : '';
+      return `<label style="display:inline-flex;align-items:center;gap:3px;margin:3px 8px 3px 0;font-size:0.78rem;color:#cbd5e1">
+        <input type="checkbox" class="pisc-chk-${key}" value="${esc(p.id)}" ${checked}> ${label} (${p.motores})
+      </label>`;
+    }).join('');
+    return g==='__nogroup__' ? items : `<div style="margin-top:6px"><strong style="color:#e2e8f0;font-size:0.8rem">${esc(g)}</strong><br>${items}</div>`;
+  }).join('');
+  return `<div style="background:#0f172a;border-radius:8px;padding:10px">
+    ${body || '<span class="sub">Este campamento no tiene piscinas configuradas.</span>'}
+    <div style="margin-top:8px"><button class="btn small" onclick="${saveFn}('${key}')">💾 Guardar piscinas asignadas</button></div>
+  </div>`;
+}
+function togglePiscinasConfig(i){
+  const row = document.getElementById('piscinas-cfg-'+i);
+  if(row) row.style.display = row.style.display==='none' ? 'table-row' : 'none';
+}
+async function saveConfigPiscinas(i){
+  const checks = document.querySelectorAll('.pisc-chk-'+i+':checked');
+  const ids = Array.from(checks).map(c=>c.value);
+  const p = (PERSONAL[configCampSel]||[])[i];
+  if(!p) return;
+  p.piscinas = ids;
+  await savePersonalAll();
+  renderConfigPersonal();
+}
+function onConfigPeCampChange(v){ configCampSel=v; renderConfigPersonal(); }
+async function savePersonalRow(i){
+  const list = PERSONAL[configCampSel];
+  const p = list[i];
+  p.nombre = document.getElementById('pe-nom-'+i).value.trim();
+  p.cedula = document.getElementById('pe-ced-'+i).value.trim();
+  p.cargo = document.getElementById('pe-cargo-'+i).value;
+  p.fechaIngreso = document.getElementById('pe-fi-'+i).value;
+  p.estado = document.getElementById('pe-estado-'+i).value;
+  p.novedad = document.getElementById('pe-nov-'+i).value.trim();
+  p.activo = p.estado !== 'Renunció';
+  await savePersonalAll();
+  renderConfigPersonal();
+}
+async function deletePersonalRow(i){
+  if(!confirm('¿Eliminar a esta persona del registro? (Si solo renunció, mejor cambia su Estado a "Renunció" para conservar el historial)')) return;
+  const list = PERSONAL[configCampSel];
+  list.splice(i,1);
+  await savePersonalAll();
+  renderConfigPersonal();
+}
+async function addPersonalRow(){
+  const nombre = document.getElementById('np-pe-nombre').value.trim();
+  const cedula = document.getElementById('np-pe-cedula').value.trim();
+  const cargo = document.getElementById('np-pe-cargo').value;
+  const fechaIngreso = document.getElementById('np-pe-fi').value;
+  if(!nombre){ alert('Escribe el nombre de la persona'); return; }
+  const list = PERSONAL[configCampSel] || [];
+  list.push({id:'p'+Date.now(), nombre, cedula, cargo, fechaIngreso, estado:'Trabajando', activo:true, novedad:'INGRESA'});
+  PERSONAL[configCampSel] = list;
+  await savePersonalAll();
+  renderConfigPersonal();
+}
+
+
+init();
+</script>
+</body>
+</html>
