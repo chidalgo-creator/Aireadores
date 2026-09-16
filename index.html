@@ -418,6 +418,8 @@ async function actualizarDatosSilencioso(){
         Object.assign(regDraft.personal, domPersonal);
         // NO llamar render() — proteger el formulario en curso
       } else {
+        // Guardar posición de scroll antes de re-renderizar (por si acaso)
+        window._savedScrollY = window.scrollY;
         render(); // solo re-renderiza si el formulario está vacío (nadie llenando)
       }
     }
@@ -691,6 +693,12 @@ async function renderRegistro(slug, locked){
   `;
   host.innerHTML = html;
   updateRegTotals();
+  // Restaurar posición de scroll si la guardamos antes de un auto-refresh
+  if(window._savedScrollY != null){
+    const sy = window._savedScrollY;
+    window._savedScrollY = null;
+    requestAnimationFrame(() => window.scrollTo(0, sy));
+  }
 }
 
 function rowPiscina(p, val, streak, showSector, locked){
