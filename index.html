@@ -573,6 +573,7 @@ async function renderRegistro(slug, locked){
   const piscinas = PISCINAS[slug] || [];
   const personal = (PERSONAL[slug] || []).filter(p=>p.activo!==false);
 
+  const reportLoadedFromFB = !!report; // true = tiene datos reales guardados en Firebase
   if(!report){
     // Si hay un borrador en memoria (ej: el usuario asignó piscinas sin guardar
     // el reporte), usar ese borrador para no perder los datos ya ingresados.
@@ -627,6 +628,9 @@ async function renderRegistro(slug, locked){
           <label>Fecha del reporte</label>
           <input type="date" id="reg-date" value="${regDate}">
           <button class="btn small secondary" style="margin-top:6px" onclick="onRegDateChange(document.getElementById('reg-date').value, '${slug}', ${locked})">Cargar fecha</button>
+          <div style="margin-top:5px;font-size:0.75rem;font-weight:600;${reportLoadedFromFB ? 'color:#34d399' : 'color:#fbbf24'}">
+            ${reportLoadedFromFB ? '✅ Reporte guardado encontrado' : '⚠️ Sin reporte guardado para esta fecha — valores son estimados'}
+          </div>
         </div>
       </div>
       <p class="hint">El estado del personal y los motores "Detenidos" (con su novedad) se mantienen igual día tras día hasta que tú mismo los cambies (a "En campamento" u "Operativo"). Encendidos y Apagados sí se reinician cada día.</p>
@@ -1504,10 +1508,11 @@ async function borrarReporteEspecifico(){
   const slug = mantCampSel || configCampSel || CAMPS[0]?.slug;
   const date = document.getElementById('mant-date').value;
   if(!confirm('¿Borrar el reporte de '+campName(slug)+' del '+fmtDate(date)+'? Esta acción no se puede deshacer.')) return;
-  const ok = await sset('report:'+slug+':'+date, {piscinas:{}, personal:{}});
+  // PUT null → Firebase elimina el nodo completamente (no deja registro vacío)
+  const ok = await sset('report:'+slug+':'+date, null);
   const pre = document.getElementById('mant-view');
   pre.style.display = 'block';
-  pre.textContent = ok ? 'Borrado. Vuelve a Registro en esa fecha para confirmar.' : 'No se pudo borrar, intenta de nuevo.';
+  pre.textContent = ok ? '✅ Reporte borrado correctamente.\n\nAl abrir esa fecha en el Registro el operador verá "⚠️ Sin reporte guardado" y podrá ingresar los datos nuevamente.' : '❌ No se pudo borrar, intenta de nuevo.';
 }
 async function limpiarHistorialReportes(){
   if(!confirm('¿Seguro que quieres borrar TODO el historial de reportes diarios de TODOS los campamentos? Esta acción no se puede deshacer.')) return;
