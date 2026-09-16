@@ -642,7 +642,7 @@ async function renderRegistro(slug, locked){
         <th>Piscina</th>${slug==='PANTRUSKO2'?'<th>Sector</th>':''}<th>Motores instalados</th><th>Encendidos</th><th>Apagados</th><th>Detenidos</th><th>Cuadre</th><th>Novedad / daño a corregir</th>
       </tr></thead><tbody id="reg-piscinas-body">
         ${piscinas.length ? piscinas.map(p=>rowPiscina(p, report.piscinas[p.id], detStreaks[p.id], slug==='PANTRUSKO2', locked)).join('') : '<tr><td colspan="7" class="empty">No hay piscinas registradas. Agrégalas en Configuración.</td></tr>'}
-      </tbody></table></div>
+      </tbody><tfoot id="reg-piscinas-foot"></tfoot></table></div>
     </div>
 
     <div class="card">
@@ -678,6 +678,7 @@ async function renderRegistro(slug, locked){
     </div>
   `;
   host.innerHTML = html;
+  updateRegTotals();
 }
 
 function rowPiscina(p, val, streak, showSector, locked){
@@ -701,6 +702,35 @@ async function saveTaller(slug){
   if(ok) alert('Guardado: '+v+' aireadores en taller para '+campName(slug));
   else alert('No se pudo guardar, intenta de nuevo.');
 }
+function updateRegTotals(){
+  const body = document.getElementById('reg-piscinas-body');
+  const foot = document.getElementById('reg-piscinas-foot');
+  if(!body || !foot) return;
+  const rows = body.querySelectorAll('tr[data-ps]');
+  if(!rows.length) return;
+  let tMot=0, tEnc=0, tApg=0, tDet=0;
+  rows.forEach(tr=>{
+    const motEl = tr.querySelector('.ps-mot');
+    tMot += parseInt(motEl ? (motEl.value !== undefined ? motEl.value : motEl.textContent) : 0) || 0;
+    tEnc += parseInt(tr.querySelector('.ps-enc')?.value||0) || 0;
+    tApg += parseInt(tr.querySelector('.ps-apg')?.value||0) || 0;
+    tDet += parseInt(tr.querySelector('.ps-det')?.value||0) || 0;
+  });
+  const suma = tEnc+tApg+tDet;
+  const ok = suma===tMot;
+  // detectar si hay columna Sector (PANTRUSKO2)
+  const ths = body.closest('table')?.querySelectorAll('thead th');
+  const hasSector = ths && ths.length >= 8;
+  foot.innerHTML = `<tr style="background:#0f172a;border-top:2px solid #38bdf8;font-weight:700;font-size:0.82rem">
+    <td ${hasSector?'colspan="2"':''} style="padding:7px 10px;color:#94a3b8;letter-spacing:.4px;text-transform:uppercase;font-size:0.7rem">TOTAL</td>
+    <td style="padding:7px 10px;text-align:center;color:#f8fafc">${tMot}</td>
+    <td style="padding:7px 10px;text-align:center;color:#34d399;font-size:1rem">${tEnc}</td>
+    <td style="padding:7px 10px;text-align:center;color:#fbbf24;font-size:1rem">${tApg}</td>
+    <td style="padding:7px 10px;text-align:center;color:#f87171;font-size:1rem">${tDet}</td>
+    <td style="padding:7px 10px;text-align:center;color:${ok?'#34d399':'#f87171'}">${ok?'✓':'⚠'} ${suma}/${tMot}</td>
+    <td></td>
+  </tr>`;
+}
 function cuadreHtml(suma, motores){
   if(suma===motores) return '<span class="badge ok">✓ '+suma+'/'+motores+'</span>';
   return '<span class="badge red">⚠ '+suma+'/'+motores+'</span>';
@@ -714,6 +744,7 @@ function onCuadreInput(id){
   const motEl = tr.querySelector('.ps-mot');
   const motores = parseInt(motEl.value !== undefined ? motEl.value : motEl.textContent || 0);
   document.getElementById('cuadre-'+id).innerHTML = cuadreHtml(enc+apg+det, motores);
+  updateRegTotals();
 }
 async function onMotoresChange(input, id){
   let v = parseInt(input.value||0); if(v<0) v=0; input.value=v;
@@ -1021,6 +1052,8 @@ async function renderDashboard(){
   const DIESEL_HORAS  = 10;      // horas de operación nocturna por defecto
   const SLUG_ELECTRICO = 'RECORCHOLIS2'; // aireadores eléctricos — excluir del diesel
 
+  window.dieselHoras = window.dieselHoras || {}; // horas por slug, editables por el usuario
+  window.dieselEncCache = {};                      // enc por slug para recalcular sin re-render
   let tMotores=0, tEnc=0, tDet=0, tPiscinas=0, tHa=0;
   let tEnCampo=0, tLibre=0, tPermiso=0, tVac=0, tRenuncia=0, tFalta=0;
   let tEncDiesel=0; // encendidos acumulados solo en campamentos con diesel (no eléctricos)
@@ -1061,8 +1094,10 @@ async function renderDashboard(){
     tEnCampo+=cEnCampo; tLibre+=cLibre; tPermiso+=cPermiso; tVac+=cVac; tRenuncia+=cRenuncia; tFalta+=cFalta;
     const esDiesel = slug !== SLUG_ELECTRICO;
     if(esDiesel) tEncDiesel += cEnc;
-    const dieselNoche = esDiesel ? (cEnc * DIESEL_GAL_H * DIESEL_HORAS) : 0;
-    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche});
+    const hSlug = window.dieselHoras[slug] || DIESEL_HORAS;
+    const dieselNoche = esDiesel ? (cEnc * DIESEL_GAL_H * hSlug) : 0;
+    window.dieselEncCache[slug] = {enc: cEnc, esDiesel};
+    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche, hSlug});
   });
 
   const pctOp = tMotores ? (tEnc/tMotores*100).toFixed(1) : '0.0';
@@ -1122,6 +1157,7 @@ async function renderDashboard(){
             <tr style="color:#a16207;font-size:0.7rem;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid #292524">
               <th style="text-align:left;padding:4px 8px">Campamento</th>
               <th style="text-align:right;padding:4px 8px">Airead. enc.</th>
+              <th style="text-align:center;padding:4px 8px">Horas</th>
               <th style="text-align:right;padding:4px 8px">Por noche</th>
               <th style="text-align:right;padding:4px 8px">📅 Lunes<br><span style="color:#57534e;font-size:0.65rem;font-weight:400">(3 noches)</span></th>
               <th style="text-align:right;padding:4px 8px">📅 Jueves<br><span style="color:#57534e;font-size:0.65rem;font-weight:400">(4 noches)</span></th>
@@ -1133,19 +1169,28 @@ async function renderDashboard(){
               <tr style="border-bottom:1px solid #1c1917">
                 <td style="padding:5px 8px;color:#e2e8f0;font-weight:600">${esc(campName(r.slug))}</td>
                 <td style="padding:5px 8px;text-align:right;color:#94a3b8">${r.enc}</td>
-                <td style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:600">${r.dieselNoche.toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*3.785).toFixed(0)}L</span></td>
-                <td style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*3).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*3*3.785).toFixed(0)}L</span></td>
-                <td style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*4).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*4*3.785).toFixed(0)}L</span></td>
-                <td style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:700">${(r.dieselNoche*7).toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*7*3.785).toFixed(0)}L</span></td>
+                <td style="padding:3px 8px;text-align:center">
+                  <div style="display:inline-flex;align-items:center;gap:3px">
+                    <input type="number" id="dsl-h-${r.slug}" value="${r.hSlug}" min="1" max="24" step="0.5"
+                      style="width:50px;text-align:center;background:#1c1917;border:1px solid #ca8a04;border-radius:4px;color:#fbbf24;font-weight:600;font-size:0.85rem;padding:3px 4px"
+                      oninput="recalcDiesel('${r.slug}')">
+                    <span style="color:#78716c;font-size:0.78rem;line-height:1">h</span>
+                  </div>
+                </td>
+                <td id="dsl-night-${r.slug}" style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:600">${r.dieselNoche.toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*3.785).toFixed(0)}L</span></td>
+                <td id="dsl-lun-${r.slug}" style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*3).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*3*3.785).toFixed(0)}L</span></td>
+                <td id="dsl-jue-${r.slug}" style="padding:5px 8px;text-align:right;color:#e2e8f0">${(r.dieselNoche*4).toFixed(0)} gal<span style="color:#78716c"> / ${(r.dieselNoche*4*3.785).toFixed(0)}L</span></td>
+                <td id="dsl-sem-${r.slug}" style="padding:5px 8px;text-align:right;color:#fbbf24;font-weight:700">${(r.dieselNoche*7).toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(r.dieselNoche*7*3.785).toFixed(0)}L</span></td>
               </tr>`).join('')}
             <!-- Fila TOTAL -->
             <tr style="border-top:2px solid #ca8a04;font-weight:700">
               <td style="padding:6px 8px;color:#fbbf24">TOTAL</td>
               <td style="padding:6px 8px;text-align:right;color:#94a3b8">${tEncDiesel}</td>
-              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${dieselDiario.toFixed(0)} gal / ${(dieselDiario*3.785).toFixed(0)}L</td>
-              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal / ${(dieselDiario*3*3.785).toFixed(0)}L</td>
-              <td style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal / ${(dieselDiario*4*3.785).toFixed(0)}L</td>
-              <td style="padding:6px 8px;text-align:right;color:#fbbf24;font-size:1rem">${(dieselDiario*7).toFixed(0)} gal / ${(dieselDiario*7*3.785).toFixed(0)}L</td>
+              <td></td>
+              <td id="dsl-tot-night" style="padding:6px 8px;text-align:right;color:#fbbf24">${dieselDiario.toFixed(0)} gal / ${(dieselDiario*3.785).toFixed(0)}L</td>
+              <td id="dsl-tot-lun" style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal / ${(dieselDiario*3*3.785).toFixed(0)}L</td>
+              <td id="dsl-tot-jue" style="padding:6px 8px;text-align:right;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal / ${(dieselDiario*4*3.785).toFixed(0)}L</td>
+              <td id="dsl-tot-sem" style="padding:6px 8px;text-align:right;color:#fbbf24;font-size:1rem">${(dieselDiario*7).toFixed(0)} gal / ${(dieselDiario*7*3.785).toFixed(0)}L</td>
             </tr>
           </tbody>
         </table>
@@ -1155,26 +1200,26 @@ async function renderDashboard(){
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px">
         <div style="background:#0f1a0a;border:1px solid #854d0e;border-radius:8px;padding:12px">
           <div style="font-size:0.62rem;color:#78716c;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Por noche (${tEncDiesel} airead.)</div>
-          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${dieselDiario.toFixed(0)} gal</div>
-          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3.785).toFixed(0)} litros</div>
+          <div id="dsl-card-night-val" style="font-size:1.6rem;font-weight:700;color:#fbbf24">${dieselDiario.toFixed(0)} gal</div>
+          <div id="dsl-card-night-lit" style="font-size:0.8rem;color:#a16207">${(dieselDiario*3.785).toFixed(0)} litros</div>
         </div>
         <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
           <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del LUNES · 3 noches</div>
           <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Cubre: lun · mar · mié</div>
-          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal</div>
-          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3*3.785).toFixed(0)} litros</div>
+          <div id="dsl-card-lun-val" style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal</div>
+          <div id="dsl-card-lun-lit" style="font-size:0.8rem;color:#a16207">${(dieselDiario*3*3.785).toFixed(0)} litros</div>
         </div>
         <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
           <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del JUEVES · 4 noches</div>
           <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Cubre: jue · vie · sáb · dom</div>
-          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal</div>
-          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*4*3.785).toFixed(0)} litros</div>
+          <div id="dsl-card-jue-val" style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal</div>
+          <div id="dsl-card-jue-lit" style="font-size:0.8rem;color:#a16207">${(dieselDiario*4*3.785).toFixed(0)} litros</div>
         </div>
         <div style="background:#0f1a0a;border:2px solid #16a34a;border-radius:8px;padding:12px">
           <div style="font-size:0.62rem;color:#16a34a;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📦 SEMANA COMPLETA · 7 noches</div>
-          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Lun ${(dieselDiario*3).toFixed(0)} + Jue ${(dieselDiario*4).toFixed(0)}</div>
-          <div style="font-size:1.6rem;font-weight:700;color:#4ade80">${(dieselDiario*7).toFixed(0)} gal</div>
-          <div style="font-size:0.8rem;color:#16a34a">${(dieselDiario*7*3.785).toFixed(0)} litros</div>
+          <div id="dsl-card-sem-sub" style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Lun ${(dieselDiario*3).toFixed(0)} + Jue ${(dieselDiario*4).toFixed(0)}</div>
+          <div id="dsl-card-sem-val" style="font-size:1.6rem;font-weight:700;color:#4ade80">${(dieselDiario*7).toFixed(0)} gal</div>
+          <div id="dsl-card-sem-lit" style="font-size:0.8rem;color:#16a34a">${(dieselDiario*7*3.785).toFixed(0)} litros</div>
         </div>
       </div>
     </div>
@@ -1270,6 +1315,52 @@ function onDashCampChange(v){ dashCampFilter=v; renderDashboard(); }
 function baseUrl(){
   return location.origin + location.pathname;
 }
+/* ── RECÁLCULO EN TIEMPO REAL DE DIESEL ─────────────────── */
+function recalcDiesel(slug){
+  const DIESEL_GAL_H = 0.275;
+  window.dieselHoras = window.dieselHoras || {};
+  window.dieselEncCache = window.dieselEncCache || {};
+
+  const h = parseFloat(document.getElementById('dsl-h-'+slug)?.value) || 10;
+  window.dieselHoras[slug] = h;
+
+  // Actualizar fila del campamento
+  const cache = window.dieselEncCache[slug];
+  if(cache){
+    const noche = cache.enc * DIESEL_GAL_H * h;
+    const s = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = v; };
+    s('dsl-night-'+slug, `${noche.toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(noche*3.785).toFixed(0)}L</span>`);
+    s('dsl-lun-'+slug,   `${(noche*3).toFixed(0)} gal<span style="color:#78716c"> / ${(noche*3*3.785).toFixed(0)}L</span>`);
+    s('dsl-jue-'+slug,   `${(noche*4).toFixed(0)} gal<span style="color:#78716c"> / ${(noche*4*3.785).toFixed(0)}L</span>`);
+    s('dsl-sem-'+slug,   `${(noche*7).toFixed(0)} gal<span style="color:#78716c;font-weight:400"> / ${(noche*7*3.785).toFixed(0)}L</span>`);
+  }
+
+  // Recalcular TOTAL sumando todos los campamentos diesel
+  let total = 0;
+  Object.entries(window.dieselEncCache).forEach(([sl, d])=>{
+    if(!d.esDiesel) return;
+    total += d.enc * DIESEL_GAL_H * (window.dieselHoras[sl] || 10);
+  });
+
+  const s = (id, v) => { const el = document.getElementById(id); if(el) el.innerHTML = v; };
+  s('dsl-tot-night', `${total.toFixed(0)} gal / ${(total*3.785).toFixed(0)}L`);
+  s('dsl-tot-lun',   `${(total*3).toFixed(0)} gal / ${(total*3*3.785).toFixed(0)}L`);
+  s('dsl-tot-jue',   `${(total*4).toFixed(0)} gal / ${(total*4*3.785).toFixed(0)}L`);
+  s('dsl-tot-sem',   `${(total*7).toFixed(0)} gal / ${(total*7*3.785).toFixed(0)}L`);
+
+  // Actualizar cards de resumen
+  s('dsl-card-night-val', `${total.toFixed(0)} gal`);
+  s('dsl-card-night-lit', `${(total*3.785).toFixed(0)} litros`);
+  s('dsl-card-lun-val',   `${(total*3).toFixed(0)} gal`);
+  s('dsl-card-lun-lit',   `${(total*3*3.785).toFixed(0)} litros`);
+  s('dsl-card-jue-val',   `${(total*4).toFixed(0)} gal`);
+  s('dsl-card-jue-lit',   `${(total*4*3.785).toFixed(0)} litros`);
+  s('dsl-card-sem-sub',   `Lun ${(total*3).toFixed(0)} + Jue ${(total*4).toFixed(0)}`);
+  s('dsl-card-sem-val',   `${(total*7).toFixed(0)} gal`);
+  s('dsl-card-sem-lit',   `${(total*7*3.785).toFixed(0)} litros`);
+}
+/* ─────────────────────────────────────────────────────────── */
+
 /* ── REPORTE DE CONSUMO DE DIESEL ───────────────────────── */
 function showDieselReport(){
   const panel = document.getElementById('diesel-report-panel');
@@ -1351,21 +1442,32 @@ async function generarDieselReport(){
   const dieselCamps = CAMPS.filter(c=>c.slug !== SLUG_ELECTRICO);
   const DIESEL_GAL_H = 0.275, DIESEL_HORAS = 10;
 
-  // Cargar reportes: para cada camp y cada fecha
-  const allData = {}; // allData[slug][date] = encendidos
-  await Promise.all(dieselCamps.map(async camp=>{
-    allData[camp.slug] = {};
-    await Promise.all(dates.map(async dt=>{
-      const rep = await sget('report:'+camp.slug+':'+dt);
-      const piscinas = PISCINAS[camp.slug] || [];
-      let enc = 0;
-      piscinas.forEach(p=>{
-        const v = rep && rep.piscinas ? rep.piscinas[p.id] : null;
-        enc += v ? v.enc : p.motores; // si no hay reporte, asume todos enc
-      });
-      allData[camp.slug][dt] = enc;
+  // Cargar reportes: para cada camp y cada fecha (con timeout de 8s por llamada)
+  const sgetTimeout = (key, ms=8000) => Promise.race([
+    sget(key),
+    new Promise(r => setTimeout(()=>r(null), ms))
+  ]);
+
+  const allData = {}; // allData[slug][date] = {enc, sinDatos}
+  try {
+    await Promise.all(dieselCamps.map(async camp=>{
+      allData[camp.slug] = {};
+      await Promise.all(dates.map(async dt=>{
+        let rep = null;
+        try { rep = await sgetTimeout('report:'+camp.slug+':'+dt); } catch(e){ rep = null; }
+        const piscinas = PISCINAS[camp.slug] || [];
+        let enc = 0; let sinDatos = !rep;
+        piscinas.forEach(p=>{
+          const v = rep && rep.piscinas ? rep.piscinas[p.id] : null;
+          enc += v ? v.enc : p.motores;
+        });
+        allData[camp.slug][dt] = {enc, sinDatos};
+      }));
     }));
-  }));
+  } catch(e) {
+    res.innerHTML = `<p style="color:#f87171">❌ Error al cargar datos: ${e.message}. Intenta de nuevo.</p>`;
+    btn.disabled=false; btn.textContent='⚡ Generar'; return;
+  }
 
   // Calcular totales por día y por camp
   const dias = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
@@ -1374,11 +1476,16 @@ async function generarDieselReport(){
   // Totales por campamento (suma de noches)
   const campTotals = {}; // campTotals[slug] = {gal: X}
   dieselCamps.forEach(c=>{ campTotals[c.slug]={gal:0}; });
+  let diasSinDatos = 0;
   dates.forEach(dt=>{
+    let hayAlgunSinDato = false;
     dieselCamps.forEach(c=>{
-      const enc = allData[c.slug][dt]||0;
-      campTotals[c.slug].gal += enc * DIESEL_GAL_H * DIESEL_HORAS;
+      const d = allData[c.slug][dt] || {enc:0, sinDatos:true};
+      if(d.sinDatos) hayAlgunSinDato = true;
+      const h = window.dieselHoras?.[c.slug] || DIESEL_HORAS;
+      campTotals[c.slug].gal += d.enc * DIESEL_GAL_H * h;
     });
+    if(hayAlgunSinDato) diasSinDatos++;
   });
 
   // Construir tabla
@@ -1398,10 +1505,13 @@ async function generarDieselReport(){
   dates.forEach(dt=>{
     let rowTotal = 0;
     const cells = dieselCamps.map(c=>{
-      const enc = allData[c.slug][dt]||0;
-      const gal = enc * DIESEL_GAL_H * DIESEL_HORAS;
+      const d = allData[c.slug][dt] || {enc:0, sinDatos:true};
+      const h = window.dieselHoras?.[c.slug] || DIESEL_HORAS;
+      const gal = d.enc * DIESEL_GAL_H * h;
       rowTotal += gal;
-      return `<td style="text-align:right;padding:4px 8px;color:#e2e8f0">${gal.toFixed(0)}<span style="color:#78716c"> / ${(gal*3.785).toFixed(0)}L</span></td>`;
+      const style = d.sinDatos ? 'color:#57534e;font-style:italic' : 'color:#e2e8f0';
+      const txt = d.sinDatos ? `<span title="Sin reporte guardado">—</span>` : `${gal.toFixed(0)}<span style="color:#78716c"> / ${(gal*3.785).toFixed(0)}L</span>`;
+      return `<td style="text-align:right;padding:4px 8px;${style}">${txt}</td>`;
     }).join('');
     grandTotal += rowTotal;
     const esLun = new Date(dt+'T12:00:00').getDay()===1;
@@ -1411,7 +1521,7 @@ async function generarDieselReport(){
     html += `<tr style="border-bottom:1px solid #1c1917;${rowStyle}">
       <td style="padding:4px 8px;color:#94a3b8">${fmtD(dt)}${tag}</td>
       ${cells}
-      <td style="text-align:right;padding:4px 8px;color:#fbbf24;font-weight:700">${rowTotal.toFixed(0)} gal</td>
+      <td style="text-align:right;padding:4px 8px;color:#fbbf24;font-weight:700">${rowTotal>0?rowTotal.toFixed(0)+' gal':'—'}</td>
     </tr>`;
   });
 
@@ -1424,14 +1534,25 @@ async function generarDieselReport(){
   html += `</tbody></table></div>`;
 
   // Resumen ejecutivo
-  const promedioNoche = grandTotal / noches;
-  html += `<div style="margin-top:12px;padding:12px;background:#0f1a0a;border-radius:8px;font-size:0.82rem;color:#a16207">
-    <strong style="color:#fbbf24">Resumen:</strong>
-    Promedio por noche: <strong style="color:#fbbf24">${promedioNoche.toFixed(0)} gal</strong> |
-    Total del período: <strong style="color:#4ade80">${grandTotal.toFixed(0)} gal / ${(grandTotal*3.785).toFixed(0)} litros</strong>
-    ${noches===7 ? ` | Proyectado mes (30d): <strong style="color:#94a3b8">${(promedioNoche*30).toFixed(0)} gal</strong>` : ''}
-  </div>
-  <p style="font-size:0.7rem;color:#57534e;margin-top:8px">⚠ Días sin reporte guardado: el sistema asume todos los aireadores encendidos (estimado conservador).</p>`;
+  const nochesConDatos = noches - diasSinDatos;
+  const promedioNoche = nochesConDatos > 0 ? grandTotal / nochesConDatos : 0;
+  if(grandTotal === 0){
+    html += `<div style="margin-top:12px;padding:16px;background:#0f1a0a;border-radius:8px;text-align:center;color:#78716c">
+      <div style="font-size:1.5rem;margin-bottom:6px">📭</div>
+      <strong>Sin reportes guardados para este período</strong><br>
+      <span style="font-size:0.8rem">Cuando los operadores guarden sus reportes diarios, aquí aparecerá el consumo real.</span>
+    </div>`;
+  } else {
+    html += `<div style="margin-top:12px;padding:12px;background:#0f1a0a;border-radius:8px;font-size:0.82rem;color:#a16207">
+      <strong style="color:#fbbf24">Resumen:</strong>
+      Promedio por noche: <strong style="color:#fbbf24">${promedioNoche.toFixed(0)} gal</strong> |
+      Total del período: <strong style="color:#4ade80">${grandTotal.toFixed(0)} gal / ${(grandTotal*3.785).toFixed(0)} litros</strong>
+      ${noches===7 ? ` | Proyectado mes (30d): <strong style="color:#94a3b8">${(promedioNoche*30).toFixed(0)} gal</strong>` : ''}
+    </div>`;
+  }
+  if(diasSinDatos > 0){
+    html += `<p style="font-size:0.7rem;color:#57534e;margin-top:8px">⚠ ${diasSinDatos} día(s) sin reporte guardado aparecen como "—" y no se incluyen en el promedio.</p>`;
+  }
 
   res.innerHTML = html;
   btn.disabled = false; btn.textContent = '⚡ Generar';
