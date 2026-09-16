@@ -1519,7 +1519,10 @@ function renderConfigPiscinas(){
   body.innerHTML = `
     <div class="card">
       <div class="row"><div class="field"><label>Campamento</label>${campSelectorHtml('cfg-ps-camp','onConfigPsCampChange')}</div></div>
-      <h2>💧 Piscinas de ${esc(campName(configCampSel))} (${list.length})</h2>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="margin:0">💧 Piscinas de ${esc(campName(configCampSel))} (${list.length})</h2>
+        <button class="btn small secondary" id="btn-leer-fb" onclick="leerPiscinasFB()" title="Recarga desde Firebase y muestra motores actuales de piscina 7 y Pc7">🔍 Leer Firebase</button>
+      </div>
       <div class="tw"><table><thead><tr><th>ID</th><th>Tipo</th><th>Motores</th><th>Hectáreas</th><th></th></tr></thead><tbody id="ps-table-body">
         ${list.map((p,i)=>`<tr data-i="${i}">
           <td><input type="text" class="mini-in" style="width:70px" value="${esc(p.id)}" id="ps-id-${i}"></td>
@@ -1548,16 +1551,64 @@ async function savePiscinaRow(i){
   const ha = haRaw==='' ? null : parseFloat(haRaw);
   // Preservar campos extra (ej: sector en PANTRUSKO2)
   list[i] = Object.assign({}, list[i], {id, tipo, motores, ha});
+  const status = document.getElementById('ps-status-'+i);
+  if(status){ status.textContent='⏳'; status.style.color='#facc15'; status.style.opacity='1'; }
   const ok = await savePiscinasAll();
-  if(ok){
-    const status = document.getElementById('ps-status-'+i);
-    if(status){ status.textContent='✓'; status.style.opacity='1'; setTimeout(()=>{ status.style.opacity='0'; },1500); }
-  } else {
+  if(!ok){
+    if(status){ status.textContent='❌'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },3000); }
     alert('❌ No se pudo guardar en Firebase. Revisa tu conexión e intenta de nuevo.');
     const fresh = await sget('roster:piscinas:all');
     if(fresh){ PISCINAS = fresh; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; } }
     renderConfigPiscinas();
+    return;
   }
+  // Verificación post-guardado: releer de Firebase y confirmar que el valor quedó correcto
+  await new Promise(r=>setTimeout(r,1500));
+  const fbData = await sget('roster:piscinas:all');
+  if(fbData){
+    const fbList = fbData[configCampSel] || [];
+    const fbP = Array.isArray(fbList)
+      ? fbList.find(p=>p && p.id===id)
+      : Object.values(fbList).find(p=>p && p.id===id);
+    if(!fbP){
+      if(status){ status.textContent='⚠'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },5000); }
+      alert('⚠️ ADVERTENCIA: Firebase no encuentra la piscina "'+id+'" en '+configCampSel+' después de guardar. Contacta al administrador.');
+      return;
+    }
+    if(fbP.motores !== motores){
+      if(status){ status.textContent='⚠'; status.style.color='#f87171'; setTimeout(()=>{ status.style.opacity='0'; },5000); }
+      alert('⚠️ ADVERTENCIA: Se guardó motores='+motores+' pero Firebase tiene motores='+fbP.motores+' para piscina "'+id+'" en '+configCampSel+'.\n\nEl guardado no persistió correctamente. Intenta de nuevo.');
+      // Recargar datos reales de Firebase
+      PISCINAS = fbData; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+      renderConfigPiscinas();
+      return;
+    }
+    // Actualizar PISCINAS en memoria con lo que realmente tiene Firebase
+    PISCINAS = fbData; for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+  }
+  if(status){ status.textContent='✓ '+motores+' motores'; status.style.color='#34d399'; setTimeout(()=>{ status.style.opacity='0'; },3000); }
+}
+async function leerPiscinasFB(){
+  const btn = document.getElementById('btn-leer-fb');
+  if(btn){ btn.disabled=true; btn.textContent='⏳ Leyendo...'; }
+  const fbData = await sget('roster:piscinas:all');
+  if(btn){ btn.disabled=false; btn.textContent='🔍 Leer Firebase'; }
+  if(!fbData){ alert('❌ No se pudo leer Firebase. Verifica tu conexión.'); return; }
+  PISCINAS = fbData;
+  for(const c of CAMPS){ if(!PISCINAS[c.slug]) PISCINAS[c.slug]=[]; }
+  renderConfigPiscinas();
+  const list = PISCINAS[configCampSel] || [];
+  const ps7 = Array.isArray(list)
+    ? list.find(p=>p && p.id==='7')
+    : Object.values(list).find(p=>p && p.id==='7');
+  const pc7 = Array.isArray(list)
+    ? list.find(p=>p && p.id==='Pc7')
+    : Object.values(list).find(p=>p && p.id==='Pc7');
+  let msg = '✅ Datos recargados desde Firebase para '+campName(configCampSel)+'.\n\n';
+  if(ps7) msg += 'PS 7  → motores: '+ps7.motores+'\n';
+  if(pc7) msg += 'Pc7   → motores: '+pc7.motores+'\n';
+  if(!ps7 && !pc7) msg += '(Sin piscinas 7 o Pc7 en este campamento)';
+  alert(msg);
 }
 async function deletePiscinaRow(i){
   if(!confirm('¿Eliminar esta piscina del registro?')) return;
