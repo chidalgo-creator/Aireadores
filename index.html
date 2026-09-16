@@ -409,11 +409,17 @@ async function actualizarDatosSilencioso(){
       });
       const hayDatosDOM = Object.keys(domPiscinas).length > 0 || Object.keys(domPersonal).length > 0;
       if(hayDatosDOM){
+        // El operador tiene datos sin guardar en el formulario.
+        // Guardamos en regDraft por si acaso, pero NO re-renderizamos para no
+        // borrar lo que está escribiendo. Los datos de PISCINAS/PERSONAL ya se
+        // actualizaron en memoria arriba — se usarán en el próximo guardado.
         if(!regDraft) regDraft = {piscinas:{}, personal:{}};
         Object.assign(regDraft.piscinas, domPiscinas);
         Object.assign(regDraft.personal, domPersonal);
+        // NO llamar render() — proteger el formulario en curso
+      } else {
+        render(); // solo re-renderiza si el formulario está vacío (nadie llenando)
       }
-      render(); // solo re-renderiza si hubo cambio real en los datos
     }
 
     // Siempre actualizar el indicador de hora
@@ -575,14 +581,20 @@ async function renderRegistro(slug, locked){
 
   const reportLoadedFromFB = !!report; // true = tiene datos reales guardados en Firebase
   if(!report){
-    // Si hay un borrador en memoria (ej: el usuario asignó piscinas sin guardar
-    // el reporte), usar ese borrador para no perder los datos ya ingresados.
-    if(regDraft && (Object.keys(regDraft.piscinas||{}).length > 0 || Object.keys(regDraft.personal||{}).length > 0)){
-      report = regDraft;
-    } else {
-      report = {piscinas:{}, personal:{}};
+    report = {piscinas:{}, personal:{}};
+  }
+  // Si hay un borrador en memoria (datos que el usuario escribió y aún no guardó),
+  // aplicarlos SIEMPRE encima del reporte de Firebase — así el auto-refresh no
+  // borra lo que el operador tiene llenando aunque ya exista un reporte guardado.
+  if(regDraft && (Object.keys(regDraft.piscinas||{}).length > 0 || Object.keys(regDraft.personal||{}).length > 0)){
+    for(const [pid, vals] of Object.entries(regDraft.piscinas||{})){
+      report.piscinas[pid] = {...(report.piscinas[pid]||{}), ...vals};
     }
-  } else {
+    for(const [pid, vals] of Object.entries(regDraft.personal||{})){
+      report.personal[pid] = {...(report.personal[pid]||{}), ...vals};
+    }
+  }
+  {
     for(const p of piscinas){
       if(report.piscinas[p.id] && report.piscinas[p.id].apg===undefined) report.piscinas[p.id].apg = 0;
     }
