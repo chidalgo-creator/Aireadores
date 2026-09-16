@@ -1013,8 +1013,13 @@ async function renderDashboard(){
   const slugs = CAMPS.map(c=>c.slug);
   const reports = await fetchReports(dashDate, slugs);
 
+  const DIESEL_GAL_H = 0.275;   // galones por aireador por hora
+  const DIESEL_HORAS  = 10;      // horas de operación nocturna por defecto
+  const SLUG_ELECTRICO = 'RECORCHOLIS2'; // aireadores eléctricos — excluir del diesel
+
   let tMotores=0, tEnc=0, tDet=0, tPiscinas=0, tHa=0;
   let tEnCampo=0, tLibre=0, tPermiso=0, tVac=0, tRenuncia=0, tFalta=0;
+  let tEncDiesel=0; // encendidos acumulados solo en campamentos con diesel (no eléctricos)
   let novedades = [];
   let personalHoy = [];
   let campRows = [];
@@ -1050,12 +1055,17 @@ async function renderDashboard(){
     });
     tMotores+=cMotores; tEnc+=cEnc; tDet+=cDet; tPiscinas+=piscinas.length; tHa+=cHa;
     tEnCampo+=cEnCampo; tLibre+=cLibre; tPermiso+=cPermiso; tVac+=cVac; tRenuncia+=cRenuncia; tFalta+=cFalta;
-    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport});
+    const esDiesel = slug !== SLUG_ELECTRICO;
+    if(esDiesel) tEncDiesel += cEnc;
+    const dieselNoche = esDiesel ? (cEnc * DIESEL_GAL_H * DIESEL_HORAS) : 0;
+    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche});
   });
 
   const pctOp = tMotores ? (tEnc/tMotores*100).toFixed(1) : '0.0';
   const psPorOperador = operadoresTotal ? (tPiscinas/operadoresTotal).toFixed(1) : '-';
   const motPorMec = mecanicosTotal ? (tMotores/mecanicosTotal).toFixed(1) : '-';
+  const dieselDiario  = tEncDiesel * DIESEL_GAL_H * DIESEL_HORAS;
+  const dieselSemanal = dieselDiario * 7;
 
   let html = `
     <div class="card">
@@ -1091,13 +1101,63 @@ async function renderDashboard(){
       <div class="stat"><div class="lbl">Renuncias (histórico)</div><div class="val red">${tRenuncia}</div></div>
     </div>
 
+    <div class="card" style="border:1px solid #854d0e;background:linear-gradient(135deg,#1c1007 0%,#0f172a 100%)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:1.3rem">⛽</span>
+        <h2 style="margin:0;color:#fbbf24">Estimado de diesel (${DIESEL_HORAS}h · ${DIESEL_GAL_H} gal/motor/h)</h2>
+      </div>
+      <p style="font-size:0.75rem;color:#78716c;margin:0 0 14px">Excluye ${campName(SLUG_ELECTRICO)} (eléctrico). Entregas: <strong style="color:#fbbf24">lunes y jueves</strong>. Basado en aireadores encendidos del último reporte.</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:14px">
+
+        <!-- Por noche -->
+        <div style="background:#0f1a0a;border:1px solid #854d0e;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#78716c;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Por noche (${tEncDiesel} airead. × ${DIESEL_HORAS}h)</div>
+          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${dieselDiario.toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3.785).toFixed(0)} litros</div>
+        </div>
+
+        <!-- Pedido del LUNES (siempre 3 noches: lun, mar, mié) -->
+        <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del LUNES</div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">Cubre: lun · mar · mié <span style="color:#4ade80">(3 noches)</span></div>
+          <div style="font-size:1.6rem;font-weight:700;color:#fbbf24">${(dieselDiario*3).toFixed(0)} gal</div>
+          <div style="font-size:0.8rem;color:#a16207">${(dieselDiario*3*3.785).toFixed(0)} litros</div>
+        </div>
+
+        <!-- Pedido del JUEVES -->
+        <div style="background:#0f1a0a;border:2px solid #ca8a04;border-radius:8px;padding:12px">
+          <div style="font-size:0.62rem;color:#ca8a04;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">📅 Pedido del JUEVES</div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:2px">
+            <span style="color:#4ade80">4 noches</span> (jue·vie·sáb·dom): <strong style="color:#fbbf24">${(dieselDiario*4).toFixed(0)} gal</strong> / ${(dieselDiario*4*3.785).toFixed(0)}L
+          </div>
+          <div style="font-size:0.7rem;color:#78716c;margin-bottom:6px">
+            <span style="color:#94a3b8">3 noches</span> (jue·vie·sáb, sin dom): <strong style="color:#d4a017">${(dieselDiario*3).toFixed(0)} gal</strong> / ${(dieselDiario*3*3.785).toFixed(0)}L
+          </div>
+          <div style="font-size:0.65rem;color:#57534e;border-top:1px solid #292524;padding-top:6px;margin-top:4px">
+            La opción de 3 noches asume que el domingo usan el sobrante del jueves y el lunes llega diesel nuevo.
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Resumen semana completa -->
+      <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:0.8rem;color:#a16207;border-top:1px solid #292524;padding-top:10px">
+        <span>📦 Semana <strong style="color:#fbbf24">7 noches</strong>: ${(dieselDiario*7).toFixed(0)} gal / ${(dieselDiario*7*3.785).toFixed(0)}L → Lun ${(dieselDiario*3).toFixed(0)} + Jue ${(dieselDiario*4).toFixed(0)}</span>
+        <span>📦 Semana <strong style="color:#d4a017">6 noches</strong>: ${(dieselDiario*6).toFixed(0)} gal / ${(dieselDiario*6*3.785).toFixed(0)}L → Lun ${(dieselDiario*3).toFixed(0)} + Jue ${(dieselDiario*3).toFixed(0)}</span>
+      </div>
+    </div>
+
     <div class="card">
       <h2>🏭 Por campamento</h2>
       <div class="tw"><table><thead><tr>
-        <th>Campamento</th><th>Reportó hoy</th><th>Piscinas</th><th>Motores</th><th>Encendidos</th><th>Detenidos</th><th>Taller</th><th>% Op.</th><th>Personal</th><th>En campo</th><th>Libre</th><th>Permiso méd.</th>
+        <th>Campamento</th><th>Reportó hoy</th><th>Piscinas</th><th>Motores</th><th>Encendidos</th><th>Detenidos</th><th>Taller</th><th>% Op.</th><th>⛽ Diesel/noche</th><th>Personal</th><th>En campo</th><th>Libre</th><th>Permiso méd.</th>
       </tr></thead><tbody>
         ${campRows.map(r=>{
           const p = r.motores? (r.enc/r.motores*100).toFixed(1) : '0.0';
+          const dCell = r.esDiesel
+            ? `<td style="color:#fbbf24;font-weight:600">${r.dieselNoche.toFixed(0)} gal<span style="color:#78716c;font-weight:400;font-size:0.72rem"> / ${(r.dieselNoche*3.785).toFixed(0)}L</span></td>`
+            : `<td style="color:#64748b;font-size:0.75rem">⚡ eléctrico</td>`;
           return `<tr>
             <td><strong>${esc(campName(r.slug))}</strong></td>
             <td>${r.hasReport?'<span class="badge ok">✓ sí</span>':'<span class="badge gray">sin datos</span>'}</td>
@@ -1105,7 +1165,7 @@ async function renderDashboard(){
             <td><span class="badge ok">${r.enc}</span></td>
             <td>${r.det>0?'<span class="badge warn">'+r.det+'</span>':'0'}</td>
             <td>${(TALLER[r.slug]||0)>0?'<span class="badge red">'+(TALLER[r.slug]||0)+'</span>':'0'}</td>
-            <td>${p}%</td><td>${r.personal}</td><td>${r.enCampo}</td><td>${r.libre}</td><td>${r.permiso}</td>
+            <td>${p}%</td>${dCell}<td>${r.personal}</td><td>${r.enCampo}</td><td>${r.libre}</td><td>${r.permiso}</td>
           </tr>`;
         }).join('')}
       </tbody></table></div>
