@@ -1117,7 +1117,7 @@ async function renderDashboard(){
     const hSlug = window.dieselHoras[slug] || DIESEL_HORAS;
     const dieselNoche = esDiesel ? (cEnc * DIESEL_GAL_H * hSlug) : 0;
     window.dieselEncCache[slug] = {enc: cEnc, esDiesel};
-    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche, hSlug});
+    campRows.push({slug, piscinas:piscinas.length, motores:cMotores, enc:cEnc, det:cDet, ha:cHa, personal:personal.length, enCampo:cEnCampo, libre:cLibre, permiso:cPermiso, hasReport: rep.hasOwnReport, esDiesel, dieselNoche, hSlug});
   });
 
   const pctOp = tMotores ? (tEnc/tMotores*100).toFixed(1) : '0.0';
@@ -1247,7 +1247,7 @@ async function renderDashboard(){
     <div class="card">
       <h2>🏭 Por campamento</h2>
       <div class="tw"><table><thead><tr>
-        <th>Campamento</th><th>Reportó hoy</th><th>Piscinas</th><th>Motores</th><th>Encendidos</th><th>Detenidos</th><th>Taller</th><th>% Op.</th><th>⛽ Diesel/noche</th><th>Personal</th><th>En campo</th><th>Libre</th><th>Permiso méd.</th>
+        <th>Campamento</th><th>Reportó hoy</th><th>Piscinas</th><th>Hectáreas</th><th>Motores</th><th>Encendidos</th><th>Detenidos</th><th>Taller</th><th>% Op.</th><th>⛽ Diesel/noche</th><th>Personal</th><th>En campo</th><th>Libre</th><th>Permiso méd.</th>
       </tr></thead><tbody>
         ${campRows.map(r=>{
           const p = r.motores? (r.enc/r.motores*100).toFixed(1) : '0.0';
@@ -1257,7 +1257,7 @@ async function renderDashboard(){
           return `<tr>
             <td><strong>${esc(campName(r.slug))}</strong></td>
             <td>${r.hasReport?'<span class="badge ok">✓ sí</span>':'<span class="badge gray">sin datos</span>'}</td>
-            <td>${r.piscinas}</td><td>${r.motores}</td>
+            <td>${r.piscinas}</td><td style="color:#94a3b8">${r.ha>0?r.ha.toFixed(1):'—'}</td><td>${r.motores}</td>
             <td><span class="badge ok">${r.enc}</span></td>
             <td>${r.det>0?'<span class="badge warn">'+r.det+'</span>':'0'}</td>
             <td>${(TALLER[r.slug]||0)>0?'<span class="badge red">'+(TALLER[r.slug]||0)+'</span>':'0'}</td>
