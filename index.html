@@ -1264,7 +1264,38 @@ async function renderDashboard(){
             <td>${p}%</td>${dCell}<td>${r.personal}</td><td>${r.enCampo}</td><td>${r.libre}</td><td>${r.permiso}</td>
           </tr>`;
         }).join('')}
-      </tbody></table></div>
+      </tbody><tfoot>${(()=>{
+        const tP   = campRows.reduce((s,r)=>s+r.piscinas,0);
+        const tHa  = campRows.reduce((s,r)=>s+(r.ha||0),0);
+        const tMot = campRows.reduce((s,r)=>s+r.motores,0);
+        const tEnc = campRows.reduce((s,r)=>s+r.enc,0);
+        const tDet = campRows.reduce((s,r)=>s+r.det,0);
+        const tTal = campRows.reduce((s,r)=>s+(TALLER[r.slug]||0),0);
+        const tPct = tMot ? (tEnc/tMot*100).toFixed(1) : '0.0';
+        const tDsl = campRows.filter(r=>r.esDiesel).reduce((s,r)=>s+r.dieselNoche,0);
+        const tPer = campRows.reduce((s,r)=>s+r.personal,0);
+        const tCam = campRows.reduce((s,r)=>s+r.enCampo,0);
+        const tLib = campRows.reduce((s,r)=>s+r.libre,0);
+        const tPrm = campRows.reduce((s,r)=>s+r.permiso,0);
+        const tRep = campRows.filter(r=>r.hasReport).length;
+        const cs   = 'padding:6px 10px;font-weight:700;font-size:0.82rem;border-top:2px solid #38bdf8';
+        return `<tr style="background:#0f172a">
+          <td style="${cs};color:#94a3b8;text-transform:uppercase;font-size:0.7rem">TOTAL</td>
+          <td style="${cs};color:#94a3b8">${tRep}/${campRows.length}</td>
+          <td style="${cs}">${tP}</td>
+          <td style="${cs};color:#94a3b8">${tHa.toFixed(1)}</td>
+          <td style="${cs}">${tMot}</td>
+          <td style="${cs};color:#34d399">${tEnc}</td>
+          <td style="${cs};color:${tDet>0?'#f87171':'#94a3b8'}">${tDet}</td>
+          <td style="${cs};color:${tTal>0?'#f87171':'#94a3b8'}">${tTal}</td>
+          <td style="${cs}">${tPct}%</td>
+          <td style="${cs};color:#fbbf24">${tDsl.toFixed(0)} gal<span style="color:#78716c;font-weight:400;font-size:0.72rem"> / ${(tDsl*3.785).toFixed(0)}L</span></td>
+          <td style="${cs}">${tPer}</td>
+          <td style="${cs}">${tCam}</td>
+          <td style="${cs}">${tLib}</td>
+          <td style="${cs}">${tPrm}</td>
+        </tr>`;
+      })()}</tfoot></table></div>
     </div>
 
     <div class="card">
